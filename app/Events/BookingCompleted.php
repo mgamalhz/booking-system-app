@@ -5,7 +5,7 @@ namespace App\Events;
 use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
 use Illuminate\Foundation\Events\Dispatchable;
 
-class BookingConfirmed implements ShouldDispatchAfterCommit
+class BookingCompleted implements ShouldDispatchAfterCommit
 {
     use Dispatchable;
 

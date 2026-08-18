@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('customer_id')->constrained()->cascadeOnDelete();
             $table->foreignId('slot_id')->constrained()->cascadeOnDelete();
             $table->foreignId('resource_id')->constrained()->cascadeOnDelete();
-            $table->enum('status', ['pending', 'confirmed', 'canceled']);
+            $table->enum('status', ['pending', 'confirmed', 'canceled', 'completed']);
             $table->timestamps();
         });
     }

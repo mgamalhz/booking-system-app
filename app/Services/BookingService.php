@@ -2,7 +2,10 @@
 
 namespace App\Services;
 
-use App\Jobs\SendBookingConfirmation;
+use App\Events\BookingCancelled;
+use App\Events\BookingCompleted;
+use App\Events\BookingConfirmed;
+use App\Exceptions\InvalidBookingStatusTransition;
 use App\Models\Booking;
 use App\Repositories\Interfaces\BookingRepositoryInterface;
 use App\Strategies\BookingStrategies\BookingStrategyResolver;
@@ -33,34 +36,99 @@ class BookingService
 
         return Cache::lock("slot:{$data['slot_id']}:book", $ttl)
             ->block($waitSeconds, function () use ($data) {
-                $booking = $this->createBooking($data);
-                SendBookingConfirmation::dispatchIf(
-                    $booking->status === 'confirmed',
-                    $booking,
-                )->afterCommit();
-
-                return $booking;
+                return $this->createBooking($data);
             });
     }
 
     public function updateBooking(array $data, int $id): bool
     {
-        return $this->bookingRepository->update($data, $id);
+        $this->updateExistingBooking($this->bookingRepository->find($id), $data);
+
+        return true;
     }
 
+    /**
+     * @throws InvalidBookingStatusTransition
+     */
     public function updateExistingBooking(Booking $booking, array $data): Booking
     {
-        // Route model binding already loaded this row. Updating it directly avoids
-        // re-reading the booking and all three globally eager-loaded relations.
-        $booking->update($data);
-        $updatedBooking = $booking->refresh()->loadMissing(['slot', 'resource', 'customer']);
+        $requestedStatus = $data['status'] ?? null;
+        unset($data['status']);
 
-        SendBookingConfirmation::dispatchIf(
-            $updatedBooking->status === 'confirmed',
-            $updatedBooking,
-        )->afterCommit();
+        if ($data !== []) {
+            $this->bookingRepository->update($data, $booking->id);
+        }
+
+        if ($requestedStatus !== null) {
+            $booking = $this->transitionStatus($this->bookingRepository->find($booking->id), $requestedStatus);
+        }
+
+        return $this->bookingRepository->find($booking->id);
+    }
+
+    /**
+     * @throws InvalidBookingStatusTransition
+     */
+    public function transitionStatus(Booking $booking, string $toStatus): Booking
+    {
+        $fromStatus = (string) $booking->status;
+
+        if ($fromStatus === $toStatus) {
+            return $booking;
+        }
+
+        if (! $this->canTransition($fromStatus, $toStatus)) {
+            throw InvalidBookingStatusTransition::for($booking->id, $fromStatus, $toStatus);
+        }
+
+        $occurredAt = now()->toISOString();
+
+        $this->bookingRepository->update(['status' => $toStatus], $booking->id);
+
+        $updatedBooking = $this->bookingRepository->find($booking->id);
+
+        match ($toStatus) {
+            'confirmed' => BookingConfirmed::dispatch(
+                $updatedBooking->id,
+                $updatedBooking->customer_id,
+                $updatedBooking->slot_id,
+                $updatedBooking->resource_id,
+                $fromStatus,
+                $toStatus,
+                $occurredAt,
+            ),
+            'canceled' => BookingCancelled::dispatch(
+                $updatedBooking->id,
+                $updatedBooking->customer_id,
+                $updatedBooking->slot_id,
+                $updatedBooking->resource_id,
+                $fromStatus,
+                $toStatus,
+                $occurredAt,
+            ),
+            'completed' => BookingCompleted::dispatch(
+                $updatedBooking->id,
+                $updatedBooking->customer_id,
+                $updatedBooking->slot_id,
+                $updatedBooking->resource_id,
+                $fromStatus,
+                $toStatus,
+                $occurredAt,
+            ),
+            default => null,
+        };
 
         return $updatedBooking;
+    }
+
+    private function canTransition(string $fromStatus, string $toStatus): bool
+    {
+        return in_array($toStatus, match ($fromStatus) {
+            'pending' => ['confirmed', 'canceled'],
+            'confirmed' => ['canceled', 'completed'],
+            'canceled', 'completed' => [],
+            default => [],
+        }, true);
     }
 
     public function deleteBooking(int $id): bool

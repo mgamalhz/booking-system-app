@@ -2,28 +2,20 @@
 
 namespace App\Listeners;
 
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Support\Facades\Log;
+use App\Models\BookingStatusEvent;
 
-class LogConfirmedBooking implements ShouldQueue
+class RecordBookingStatusEvent
 {
-    /**
-     * Create the event listener.
-     */
-    public function __construct() {}
-
-    /**
-     * Handle the event.
-     */
     public function handle(object $event): void
     {
-        Log::info('Booking status changed', [
+        BookingStatusEvent::query()->create([
             'booking_id' => $event->bookingId,
             'customer_id' => $event->customerId,
             'slot_id' => $event->slotId,
             'resource_id' => $event->resourceId,
             'from_status' => $event->fromStatus,
             'to_status' => $event->toStatus,
+            'event_type' => class_basename($event),
             'occurred_at' => $event->occurredAt,
         ]);
     }

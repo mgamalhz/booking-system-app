@@ -2,9 +2,13 @@
 
 namespace App\Providers;
 
+use App\Events\BookingCancelled;
+use App\Events\BookingCompleted;
 use App\Events\BookingConfirmed;
 use App\Listeners\BookingConfirmationNotificationListener;
+use App\Listeners\InvalidateBookingAvailabilityCache;
 use App\Listeners\LogConfirmedBooking;
+use App\Listeners\RecordBookingStatusEvent;
 use App\Listeners\SendFailedJobAlert;
 use App\Repositories\BookingDocumentRepository;
 use App\Repositories\BookingRepository;
@@ -48,8 +52,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        foreach ([BookingConfirmed::class, BookingCancelled::class, BookingCompleted::class] as $event) {
+            Event::listen($event, [RecordBookingStatusEvent::class, 'handle']);
+            Event::listen($event, [InvalidateBookingAvailabilityCache::class, 'handle']);
+            Event::listen($event, [LogConfirmedBooking::class, 'handle']);
+        }
+
         Event::listen(BookingConfirmed::class, [BookingConfirmationNotificationListener::class, 'handle']);
-        Event::listen(BookingConfirmed::class, [LogConfirmedBooking::class, 'handle']);
         Event::listen(JobFailed::class, [SendFailedJobAlert::class, 'handle']);
 
     }
