@@ -2,15 +2,16 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Exceptions\ApiConflictException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreBookingRequest;
 use App\Http\Requests\UpdateBookingRequest;
 use App\Models\Booking;
 use App\Services\BookingService;
+use Exception;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class BookingController extends Controller
 {
@@ -22,8 +23,15 @@ class BookingController extends Controller
 
                 return $booking->fresh();
             });
-        } catch (LockTimeoutException $exception) {
-            throw new ApiConflictException('This slot is currently being booked. Please try again shortly.');
+        } catch (LockTimeoutException) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This slot is currently being booked. Please try again shortly.',
+            ], 409);
+        } catch (Exception $exception) {
+            throw ValidationException::withMessages([
+                'slot_id' => [$exception->getMessage()],
+            ]);
         }
 
         return response()->json([
@@ -41,7 +49,9 @@ class BookingController extends Controller
         abort_if((int) $booking->customer_id !== (int) auth()->id(), 403);
 
         $booking = DB::transaction(function () use ($request, $booking, $bookingService) {
-            return $bookingService->updateExistingBooking($booking, $request->validated());
+            $booking = $bookingService->updateExistingBooking($booking, $request->validated());
+
+            return $booking->fresh();
         });
 
         return response()->json([
