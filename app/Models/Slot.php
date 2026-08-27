@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+
 use App\ValueObjects\SlotDuration;
 use Database\Factories\SlotFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
