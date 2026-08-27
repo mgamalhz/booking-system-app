@@ -29,6 +29,11 @@ class GroupBookingFactory implements BookingFactoryInterface
         return $booking;
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     *
+     * @throws Exception
+     */
     private function determineGroupBookingStatus(Slot $slot, array $data): string
     {
         $currentParticipants = Booking::where('slot_id', $slot->id)
