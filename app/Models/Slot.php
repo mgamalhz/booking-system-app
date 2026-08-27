@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-
 use App\ValueObjects\SlotDuration;
 use Database\Factories\SlotFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -40,7 +39,7 @@ class Slot extends Model
     }
 
     /**
-     * @return BelongsTo<resource, $this>
+     * @return BelongsTo<Resource, $this>
      */
     public function resource(): BelongsTo
     {
