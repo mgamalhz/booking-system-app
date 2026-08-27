@@ -39,7 +39,7 @@ class Slot extends Model
     }
 
     /**
-     * @return BelongsTo<Resource, $this>
+     * @return BelongsTo<\App\Models\Resource, $this>
      */
     public function resource(): BelongsTo
     {
