@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\DB;
 class RecurringBookingStrategy implements BookingStrategyInterface
 {
     /**
+     * @param  array<string, mixed>  $data
+     *
      * @throws \Exception
      * @throws \Throwable
      */
@@ -70,6 +72,9 @@ class RecurringBookingStrategy implements BookingStrategyInterface
         });
     }
 
+    /**
+     * @return array<int, Carbon>
+     */
     public function generateDates(Carbon $startDate, Carbon $endDate, string $rule): array
     {
         $dates = [];
