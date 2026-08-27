@@ -7,6 +7,8 @@ use App\Models\Booking;
 class OneToOneBookingFactory implements BookingFactoryInterface
 {
     /**
+     * @param  array<string, mixed>  $data
+     *
      * @throws \Exception
      */
     public function create(array $data): Booking
@@ -21,7 +23,7 @@ class OneToOneBookingFactory implements BookingFactoryInterface
 
     }
 
-    private function isSlotAvailability($slotId): bool
+    private function isSlotAvailability(mixed $slotId): bool
     {
         return Booking::query()
             ->where('slot_id', $slotId)
@@ -32,13 +34,13 @@ class OneToOneBookingFactory implements BookingFactoryInterface
     /**
      * @throws \Exception
      */
-    private function checkSlotAndCustomerCount($customerId, $slotId): void
+    private function checkSlotAndCustomerCount(mixed $customerId, mixed $slotId): void
     {
-        if (count($customerId) > 1) {
+        if (is_countable($customerId) && count($customerId) > 1) {
             throw new \Exception('More one Customer in this type is not available');
         }
 
-        if (count($slotId) > 1) {
+        if (is_countable($slotId) && count($slotId) > 1) {
             throw new \Exception('More one Slot in this type is not available');
         }
     }

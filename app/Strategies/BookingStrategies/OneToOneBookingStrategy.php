@@ -7,10 +7,8 @@ use App\Models\Booking;
 class OneToOneBookingStrategy implements BookingStrategyInterface
 {
     /**
-     * @throws \Exception
-     */
-
-    /**
+     * @param  array<string, mixed>  $data
+     *
      * @throws \Exception
      */
     public function createBooking(array $data): Booking
@@ -28,7 +26,7 @@ class OneToOneBookingStrategy implements BookingStrategyInterface
 
     }
 
-    private function isSlotAvailability($slotId): bool
+    private function isSlotAvailability(mixed $slotId): bool
     {
         return Booking::query()
             ->where('slot_id', $slotId)

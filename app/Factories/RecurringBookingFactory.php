@@ -9,6 +9,11 @@ use Illuminate\Support\Facades\DB;
 
 class RecurringBookingFactory implements BookingFactoryInterface
 {
+    /**
+     * @param  array<string, mixed>  $data
+     *
+     * @throws \Throwable
+     */
     public function create(array $data): Booking
     {
         if (! isset($data['recurrence_rule'], $data['end_date'])) {
@@ -51,6 +56,9 @@ class RecurringBookingFactory implements BookingFactoryInterface
         });
     }
 
+    /**
+     * @return array<int, Carbon>
+     */
     private function generateDates(Carbon $startDate, Carbon $endDate, string $rule): array
     {
         $dates = [];
