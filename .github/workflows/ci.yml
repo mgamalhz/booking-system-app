@@ -11,7 +11,6 @@ jobs:
   style:
     name: Code Style (Pint)
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -30,11 +29,9 @@ jobs:
       - name: Run Pint
         run: ./vendor/bin/pint --test
 
-
   analyse:
     name: Static Analysis (PHPStan)
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -53,11 +50,9 @@ jobs:
       - name: Run PHPStan
         run: vendor/bin/phpstan analyse --memory-limit=512M
 
-
   tests:
     name: Tests (PHPUnit)
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
