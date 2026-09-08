@@ -14,6 +14,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
+use Paymob\Laravel\Contracts\PaymobClientContract;
+use Paymob\Laravel\DTO\AuthenticationResponseDto;
+use Paymob\Laravel\DTO\CapturePaymentResponseDto;
+use Paymob\Laravel\DTO\OrderResponseDto;
+use Paymob\Laravel\DTO\PaymentKeyResponseDto;
+use Paymob\Laravel\DTO\RegisterOrderData;
+use Paymob\Laravel\DTO\RequestPaymentKeyData;
 use Tests\TestCase;
 
 class BookingEventTest extends TestCase
@@ -23,6 +30,7 @@ class BookingEventTest extends TestCase
     public function test_booking_confirmation_job_is_pushed_when_booking_is_updated()
     {
         Queue::fake();
+        $this->swapPaymobClient();
 
         $booking = Booking::factory()->create();
         $this->actingAs(Customer::query()->findOrFail($booking->customer_id), 'sanctum')
