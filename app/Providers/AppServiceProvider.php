@@ -67,5 +67,6 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Event::listen(JobFailed::class, [SendFailedJobAlert::class, 'handle']);
+
     }
 }
