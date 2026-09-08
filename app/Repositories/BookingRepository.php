@@ -68,6 +68,30 @@ class BookingRepository implements BookingCancellationRepositoryInterface, Booki
     /**
      * @return Collection<int, Booking>
      */
+    public function getPendingBookingsForCustomer(int $customerId): Collection
+    {
+        return Booking::query()
+            ->where('customer_id', $customerId)
+            ->where('status', 'pending')
+            ->latest()
+            ->get();
+    }
+
+    public function findPendingBookingForCustomer(int $bookingId, int $customerId): Booking
+    {
+        /** @var Booking $booking */
+        $booking = Booking::query()
+            ->where('id', $bookingId)
+            ->where('customer_id', $customerId)
+            ->where('status', 'pending')
+            ->firstOrFail();
+
+        return $booking;
+    }
+
+    /**
+     * @return Collection<int, Booking>
+     */
     public function getBookingForReminder(int $daysBeforeReminder): Collection
     {
         $reminderDate = Carbon::now()->addDays($daysBeforeReminder)->toDateString();

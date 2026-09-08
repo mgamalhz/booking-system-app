@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreBookingRequest;
 use App\Http\Requests\UpdateBookingRequest;
 use App\Models\Booking;
+use App\Services\BookingPaymentService;
 use App\Services\BookingService;
 use Exception;
 use Illuminate\Contracts\Cache\LockTimeoutException;
@@ -44,18 +45,32 @@ class BookingController extends Controller
     /**
      * @throws \Throwable
      */
-    public function update(UpdateBookingRequest $request, Booking $booking, BookingService $bookingService): JsonResponse
-    {
+    public function update(
+        UpdateBookingRequest $request,
+        Booking $booking,
+        BookingService $bookingService,
+        BookingPaymentService $bookingPaymentService,
+    ): JsonResponse {
         abort_if((int) $booking->customer_id !== (int) auth()->id(), 403);
 
-        $booking = DB::transaction(function () use ($request, $booking, $bookingService) {
-            return $bookingService->updateExistingBooking($booking, $request->validated());
+        $validated = $request->validated();
+
+        $booking = DB::transaction(function () use ($validated, $booking, $bookingService) {
+            $booking = $bookingService->updateExistingBooking($booking, $validated);
+
+            return $booking->fresh();
         });
 
-        return response()->json([
+        $response = [
             'success' => true,
             'booking' => $booking,
             'message' => 'Booking updated successfully',
-        ]);
+        ];
+
+        if (($validated['status'] ?? null) === 'confirmed' && $booking->status === 'confirmed') {
+            $response['payment'] = $bookingPaymentService->startPaymentForBooking($booking, (int) auth()->id());
+        }
+
+        return response()->json($response);
     }
 }

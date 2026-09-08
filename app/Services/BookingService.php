@@ -61,10 +61,15 @@ class BookingService
      */
     public function updateExistingBooking(Booking $booking, array $data): Booking
     {
-        // Route model binding already loaded this row. Updating it directly avoids
-        // re-reading the booking and all three globally eager-loaded relations.
-        $booking->update($data);
-        $updatedBooking = $booking->refresh()->loadMissing(['slot', 'resource', 'customer']);
+        $updated = $this->bookingRepository->update($data, $booking->id);
+
+        if (! $updated) {
+            throw ValidationException::withMessages([
+                'booking' => ['Booking could not be updated.'],
+            ]);
+        }
+
+        $updatedBooking = $this->bookingRepository->find($booking->id);
 
         SendBookingConfirmation::dispatchIf(
             $updatedBooking->status === 'confirmed',

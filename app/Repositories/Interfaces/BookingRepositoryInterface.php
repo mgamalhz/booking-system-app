@@ -32,6 +32,13 @@ interface BookingRepositoryInterface
     /**
      * @return Collection<int, Booking>
      */
+    public function getPendingBookingsForCustomer(int $customerId): Collection;
+
+    public function findPendingBookingForCustomer(int $bookingId, int $customerId): Booking;
+
+    /**
+     * @return Collection<int, Booking>
+     */
     public function getBookingForReminder(int $daysBeforeReminder): Collection;
 
     /**

@@ -14,6 +14,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
+use Paymob\Laravel\Contracts\PaymobClientContract;
+use Paymob\Laravel\DTO\AuthenticationResponseDto;
+use Paymob\Laravel\DTO\CapturePaymentResponseDto;
+use Paymob\Laravel\DTO\OrderResponseDto;
+use Paymob\Laravel\DTO\PaymentKeyResponseDto;
+use Paymob\Laravel\DTO\RegisterOrderData;
+use Paymob\Laravel\DTO\RequestPaymentKeyData;
 use Tests\TestCase;
 
 class BookingEventTest extends TestCase

@@ -13,6 +13,8 @@ use App\Repositories\Interfaces\BookingCancellationRepositoryInterface;
 use App\Repositories\Interfaces\BookingDocumentRepositoryInterface;
 use App\Repositories\Interfaces\BookingRepositoryInterface;
 use App\Repositories\Interfaces\CustomerRepositoryInterface;
+use App\Repositories\Interfaces\PaymentRepositoryInterface;
+use App\Repositories\PaymentRepository;
 use App\Services\Contracts\FilesUploadServiceInterface;
 use App\Services\S3FilesUploadService;
 use App\Strategies\BookingStrategies\BookingStrategyInterface;
@@ -39,6 +41,7 @@ class AppServiceProvider extends ServiceProvider
         App::bind(BookingCancellationRepositoryInterface::class, BookingRepository::class);
         App::bind(BookingDocumentRepositoryInterface::class, BookingDocumentRepository::class);
         App::bind(CustomerRepositoryInterface::class, CustomerRepository::class);
+        App::bind(PaymentRepositoryInterface::class, PaymentRepository::class);
         App::bind(BookingStrategyInterface::class, BookingStrategyResolver::class);
         App::bind(FilesUploadServiceInterface::class, S3FilesUploadService::class);
     }
@@ -51,6 +54,5 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(BookingConfirmed::class, [BookingConfirmationNotificationListener::class, 'handle']);
         Event::listen(BookingConfirmed::class, [LogConfirmedBooking::class, 'handle']);
         Event::listen(JobFailed::class, [SendFailedJobAlert::class, 'handle']);
-
     }
 }
