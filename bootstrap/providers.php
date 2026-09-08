@@ -6,5 +6,4 @@ use App\Providers\HorizonServiceProvider;
 return [
     AppServiceProvider::class,
     HorizonServiceProvider::class,
-
 ];
