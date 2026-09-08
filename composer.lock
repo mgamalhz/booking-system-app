@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1d992dc480bf49e7947115ccc3bb6812",
+    "content-hash": "25ce0390fe1bb1c3f0dabcdc727af98a",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -3014,10 +3014,10 @@
         {
             "name": "paymob/laravel",
             "version": "dev-Paymob-Webhook-Handler-",
-            "dist": {
-                "type": "path",
-                "url": "../laravel-paymob",
-                "reference": "1a74bf38afebe51b1f0cb1026158f9b542d31cc0"
+            "source": {
+                "type": "git",
+                "url": "https://github.com/mgamaltech/laravel-paymob.git",
+                "reference": "bdcc438ae05b925aaa37258bf0b988f94704bea0"
             },
             "require": {
                 "illuminate/support": "^10.0|^11.0|^12.0|^13.0",
@@ -3052,9 +3052,7 @@
                 "MIT"
             ],
             "description": "Laravel integration package for Paymob payments.",
-            "transport-options": {
-                "relative": true
-            }
+            "time": "2026-09-08T10:51:55+00:00"
         },
         {
             "name": "phpoption/phpoption",
