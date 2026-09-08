@@ -15,14 +15,13 @@
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
         "league/flysystem-aws-s3-v3": "3.0",
-        "paymob/laravel": "dev-Paymob-Webhook-Handler-"
+        "paymob/laravel": "@dev"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
         "larastan/larastan": "^3.9",
         "laravel/pail": "^1.2.5",
         "laravel/pint": "^1.27",
-        "laravel/telescope": "^5.24",
         "mockery/mockery": "^1.6",
         "nunomaduro/collision": "^8.6",
         "pestphp/pest": "^4.7",
@@ -43,8 +42,8 @@
     },
     "repositories":  [
         {
-            "type": "git",
-            "url": "https://github.com/mgamaltech/laravel-paymob.git"
+            "type": "path",
+            "url": "../laravel-paymob"
         }
     ],
     "scripts": {

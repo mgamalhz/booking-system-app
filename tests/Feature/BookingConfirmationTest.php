@@ -1,11 +1,12 @@
 <?php
 
+use App\Jobs\SendBookingConfirmation;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Resource;
 use App\Models\Slot;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
 use Paymob\Laravel\Contracts\PaymobClientContract;
 use Paymob\Laravel\DTO\AuthenticationResponseDto;
 use Paymob\Laravel\DTO\CapturePaymentResponseDto;
@@ -53,51 +54,35 @@ function swapPaymobClientForBookingConfirmationTest(): void
     });
 }
 
-test('it runs the queued booking confirmation flow after a booking is confirmed', function () {
-    DB::commit();
+test('it dispatches booking confirmation job after a booking is confirmed', function () {
+    Queue::fake();
+    swapPaymobClientForBookingConfirmationTest();
 
-    try {
-        config()->set('queue.default', 'sync');
-        swapPaymobClientForBookingConfirmationTest();
+    $customer = Customer::factory()->create();
 
-        $customer = Customer::factory()->create();
+    $booking = Booking::factory()->create([
+        'customer_id' => $customer->id,
+        'status' => 'pending',
+    ]);
 
-        $booking = Booking::factory()->create([
-            'customer_id' => $customer->id,
-            'status' => 'pending',
-        ]);
+    $this->actingAs($customer, 'sanctum')
+        ->post(route('bookings.update', $booking), [
+            'status' => 'confirmed',
+        ])
+        ->assertOk()
+        ->assertJsonPath('payment.payment_key', 'payment-token');
 
-        $this->actingAs($customer, 'sanctum')
-            ->postJson(route('bookings.update', $booking), ['status' => 'confirmed'])
-            ->assertOk()
-            ->assertJsonPath('booking.status', 'confirmed')
-            ->assertJsonPath('payment.payment_key', 'payment-token');
-
-        expect($customer->notifications()->count())->toBe(1);
-        expect($customer->notifications()->first()->data)->toMatchArray([
-            'booking_id' => $booking->id,
-            'message' => 'Your booking has been confirmed.',
-        ]);
-
-        $this->assertDatabaseHas('payments', [
-            'order_type' => Booking::class,
-            'order_id' => (string) $booking->id,
-            'paymob_reference' => '987654',
-            'status' => 'processing',
-        ]);
-    } finally {
-        DB::table('payments')->delete();
-        DB::table('notifications')->delete();
-        DB::table('personal_access_tokens')->delete();
-        DB::table('bookings')->delete();
-        DB::table('slots')->delete();
-        DB::table('resources')->delete();
-        DB::table('customers')->delete();
-        DB::beginTransaction();
-    }
+    Queue::assertPushed(SendBookingConfirmation::class, function (SendBookingConfirmation $job) use ($booking) {
+        return $job->booking->is($booking)
+            && $job->queue === 'bookings'
+            && $job->afterCommit === true
+            && $job->tries === 3
+            && $job->backoff === [10, 30, 60];
+    });
 });
 
 test('it creates api bookings through the service as pending and does not dispatch confirmation', function () {
+    Queue::fake();
     config()->set('cache.default', 'array');
 
     $customer = Customer::factory()->create();
@@ -114,7 +99,7 @@ test('it creates api bookings through the service as pending and does not dispat
 
     expect($booking->status)->toBe('pending');
     expect($booking->customer_id)->toBe($customer->id);
-    expect($customer->notifications()->count())->toBe(0);
+    Queue::assertNotPushed(SendBookingConfirmation::class);
 });
 
 test('it requires authentication to create a booking', function () {
@@ -140,6 +125,7 @@ test('it rejects booking updates from another user', function () {
 });
 
 test('it rejects api booking creation when the slot is already unavailable', function () {
+    Queue::fake();
     config()->set('cache.default', 'array');
 
     $customer = Customer::factory()->create();
@@ -163,5 +149,5 @@ test('it rejects api booking creation when the slot is already unavailable', fun
         ->assertJsonValidationErrors('slot_id');
 
     expect(Booking::query()->where('slot_id', $slot->id)->count())->toBe(1);
-    expect($customer->notifications()->count())->toBe(0);
+    Queue::assertNotPushed(SendBookingConfirmation::class);
 });

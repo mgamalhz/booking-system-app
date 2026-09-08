@@ -68,9 +68,6 @@ class BookingRepository implements BookingCancellationRepositoryInterface, Booki
     /**
      * @return Collection<int, Booking>
      */
-    /**
-     * @return Collection<int, Booking>
-     */
     public function getPendingBookingsForCustomer(int $customerId): Collection
     {
         return Booking::query()
