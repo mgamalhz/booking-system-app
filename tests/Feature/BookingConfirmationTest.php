@@ -5,6 +5,9 @@ use App\Models\Customer;
 use App\Models\Resource;
 use App\Models\Slot;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\RefreshDatabaseState;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Paymob\Laravel\Contracts\PaymobClientContract;
 use Paymob\Laravel\DTO\AuthenticationResponseDto;
 use Paymob\Laravel\DTO\CapturePaymentResponseDto;
@@ -12,6 +15,7 @@ use Paymob\Laravel\DTO\OrderResponseDto;
 use Paymob\Laravel\DTO\PaymentKeyResponseDto;
 use Paymob\Laravel\DTO\RegisterOrderData;
 use Paymob\Laravel\DTO\RequestPaymentKeyData;
+use Symfony\Component\Process\Process;
 
 uses(RefreshDatabase::class);
 
@@ -53,34 +57,66 @@ function swapPaymobClientForBookingConfirmationTest(): void
 }
 
 test('it runs the queued booking confirmation flow after a booking is confirmed', function () {
-    swapPaymobClientForBookingConfirmationTest();
+    $databasePath = database_path('booking-confirmation-'.uniqid().'.sqlite');
 
-    $customer = Customer::factory()->create();
+    touch($databasePath);
 
-    $booking = Booking::factory()->create([
-        'customer_id' => $customer->id,
-        'status' => 'pending',
-    ]);
+    try {
+        config()->set('database.connections.sqlite.database', $databasePath);
+        config()->set('database.default', 'sqlite');
+        config()->set('telescope.storage.database.connection', 'sqlite');
+        DB::setDefaultConnection('sqlite');
+        DB::purge('sqlite');
+        DB::reconnect('sqlite');
+        Artisan::call('migrate:fresh', ['--database' => 'sqlite', '--force' => true]);
 
-    $this->actingAs($customer, 'sanctum')
-        ->post(route('bookings.update', $booking), [
-            'status' => 'confirmed',
-        ])
-        ->assertOk()
-        ->assertJsonPath('payment.payment_key', 'payment-token');
+        $customer = Customer::factory()->create();
 
-    expect($customer->notifications()->count())->toBe(1);
-    expect($customer->notifications()->first()->data)->toMatchArray([
-        'booking_id' => $booking->id,
-        'message' => 'Your booking has been confirmed.',
-    ]);
+        $booking = Booking::factory()->create([
+            'customer_id' => $customer->id,
+            'status' => 'pending',
+        ]);
 
-    $this->assertDatabaseHas('payments', [
-        'order_type' => Booking::class,
-        'order_id' => (string) $booking->id,
-        'paymob_order_id' => '987654',
-        'status' => 'processing',
-    ]);
+        $process = new Process([
+            PHP_BINARY,
+            base_path('tests/Support/ConfirmBookingRequest.php'),
+            $databasePath,
+            $customer->createToken('confirm-booking-test')->plainTextToken,
+            (string) $booking->id,
+        ], timeout: 30);
+        $process->run();
+
+        expect($process->isSuccessful())->toBeTrue($process->getErrorOutput());
+
+        $response = json_decode($process->getOutput(), true, flags: JSON_THROW_ON_ERROR);
+
+        expect($response['status'])->toBe(200);
+        expect($response['json']['payment']['payment_key'])->toBe('payment-token');
+
+        expect($customer->notifications()->count())->toBe(1);
+        expect($customer->notifications()->first()->data)->toMatchArray([
+            'booking_id' => $booking->id,
+            'message' => 'Your booking has been confirmed.',
+        ]);
+
+        $this->assertDatabaseHas('payments', [
+            'order_type' => Booking::class,
+            'order_id' => (string) $booking->id,
+            'paymob_reference' => '987654',
+            'status' => 'processing',
+        ]);
+    } finally {
+        DB::disconnect('sqlite');
+        config()->set('database.connections.sqlite.database', ':memory:');
+        config()->set('database.default', 'sqlite');
+        config()->set('telescope.storage.database.connection', 'sqlite');
+        DB::setDefaultConnection('sqlite');
+        RefreshDatabaseState::$migrated = false;
+
+        if (file_exists($databasePath)) {
+            unlink($databasePath);
+        }
+    }
 });
 
 test('it creates api bookings through the service as pending and does not dispatch confirmation', function () {

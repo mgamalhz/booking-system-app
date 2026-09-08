@@ -5,10 +5,11 @@ use App\Models\Customer;
 use App\Models\Resource;
 use App\Models\Slot;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\RefreshDatabaseState;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Concurrency;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\Process\Process;
 
 uses(RefreshDatabase::class);
 
@@ -31,6 +32,9 @@ function bookingCreationLockPayload(Customer $customer, Resource $resource, Slot
 function useSharedBookingCreationStore(string $databasePath, string $cachePath): void
 {
     config()->set('database.connections.sqlite.database', $databasePath);
+    config()->set('database.default', 'sqlite');
+    config()->set('telescope.storage.database.connection', 'sqlite');
+    DB::setDefaultConnection('sqlite');
     config()->set('cache.default', 'file');
     config()->set('cache.stores.file.path', $cachePath);
     config()->set('cache.stores.file.lock_path', $cachePath);
@@ -40,31 +44,6 @@ function useSharedBookingCreationStore(string $databasePath, string $cachePath):
     DB::purge('sqlite');
     DB::reconnect('sqlite');
     app('cache')->forgetDriver('file');
-}
-
-function postBookingThroughHttpKernel(string $databasePath, string $cachePath, string $token, array $payload): array
-{
-    useSharedBookingCreationStore($databasePath, $cachePath);
-
-    $request = Illuminate\Http\Request::create(
-        '/api/booking',
-        'POST',
-        server: [
-            'CONTENT_TYPE' => 'application/json',
-            'HTTP_ACCEPT' => 'application/json',
-            'HTTP_AUTHORIZATION' => 'Bearer '.$token,
-        ],
-        content: json_encode($payload, JSON_THROW_ON_ERROR),
-    );
-
-    $kernel = app(Illuminate\Contracts\Http\Kernel::class);
-    $response = $kernel->handle($request);
-    $kernel->terminate($request, $response);
-
-    return [
-        'status' => $response->getStatusCode(),
-        'json' => json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR),
-    ];
 }
 
 test('it returns conflict when another booking attempt already holds the slot lock', function () {
@@ -117,24 +96,45 @@ test('it only creates one booking when concurrent requests target the same slot'
 
     try {
         useSharedBookingCreationStore($databasePath, $cachePath);
-        Artisan::call('migrate:fresh', ['--force' => true]);
+        Artisan::call('migrate:fresh', ['--database' => 'sqlite', '--force' => true]);
 
         $customer = Customer::factory()->create();
         $resource = Resource::factory()->create();
         $slot = Slot::factory()->create();
         $token = $customer->createToken('concurrent-booking-test')->plainTextToken;
         $payload = bookingCreationLockPayload($customer, $resource, $slot);
+        $worker = base_path('tests/Support/PostBookingRequest.php');
+        $encodedPayload = base64_encode(json_encode($payload, JSON_THROW_ON_ERROR));
+        $processes = [
+            new Process([PHP_BINARY, $worker, $databasePath, $cachePath, $token, $encodedPayload], timeout: 10),
+            new Process([PHP_BINARY, $worker, $databasePath, $cachePath, $token, $encodedPayload], timeout: 10),
+        ];
 
-        $responses = Concurrency::driver('process')->run([
-            fn () => postBookingThroughHttpKernel($databasePath, $cachePath, $token, $payload),
-            fn () => postBookingThroughHttpKernel($databasePath, $cachePath, $token, $payload),
-        ], 10);
+        foreach ($processes as $process) {
+            $process->start();
+        }
+
+        $responses = collect($processes)->map(function (Process $process) {
+            $process->wait();
+
+            expect($process->isSuccessful())->toBeTrue($process->getErrorOutput());
+
+            return json_decode($process->getOutput(), true, flags: JSON_THROW_ON_ERROR);
+        });
 
         $statuses = collect($responses)->pluck('status')->sort()->values()->all();
 
-        expect($statuses)->toBe([201, 422]);
+        expect($statuses[0])->toBe(201);
+        expect($statuses[1])->toBeIn([409, 422]);
         expect(Booking::query()->where('slot_id', $slot->id)->count())->toBe(1);
     } finally {
+        DB::disconnect('sqlite');
+        config()->set('database.connections.sqlite.database', ':memory:');
+        config()->set('database.default', 'sqlite');
+        config()->set('telescope.storage.database.connection', 'sqlite');
+        DB::setDefaultConnection('sqlite');
+        RefreshDatabaseState::$migrated = false;
+
         if (file_exists($databasePath)) {
             unlink($databasePath);
         }

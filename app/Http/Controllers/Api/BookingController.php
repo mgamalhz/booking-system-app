@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreBookingRequest;
 use App\Http\Requests\UpdateBookingRequest;
 use App\Models\Booking;
+use App\Services\BookingPaymentService;
 use App\Services\BookingService;
 use Exception;
 use Illuminate\Contracts\Cache\LockTimeoutException;
