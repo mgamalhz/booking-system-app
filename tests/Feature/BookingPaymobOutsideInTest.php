@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
+use Paymob\Laravel\Contracts\PaymobClientContract;
 use Paymob\Laravel\Jobs\ProcessPaymobPayment;
 use Paymob\Laravel\Models\Payment;
 use Paymob\Laravel\Models\PaymobWebhookEvent;
@@ -126,6 +128,12 @@ function runQueuedJobsUntilEmpty(string $queues): void
     Worker::$restartable = false;
 
     test()->artisan("queue:work database --queue={$queues} --stop-when-empty --tries=1")->assertExitCode(0);
+}
+
+function processPaymobCapture(Booking $booking, int $transactionId = 987654321, int $amountCents = 25000): void
+{
+    (new ProcessPaymobPayment($booking, $transactionId, $amountCents))
+        ->handle(app(PaymobClientContract::class));
 }
 
 function signedPaymobWebhookPayload(int $orderId = 111222333, int $transactionId = 987654321, int $amountCents = 25000): array
@@ -275,6 +283,15 @@ test('authenticated booking confirmation queues work and captures payment from a
         'status' => 'processing',
     ]);
 
+    runQueuedJob('bookings');
+
+    expect(DB::table('jobs')->where('queue', 'bookings')->count())->toBe(0);
+    expect($processedJobs)->toContain(
+        ['queue' => 'bookings', 'name' => SendBookingConfirmation::class],
+    );
+
+    Queue::fake([ProcessPaymobPayment::class]);
+
     $this->postJson('/paymob/webhook', signedPaymobWebhookPayload())
         ->assertOk()
         ->assertJson(['message' => 'Webhook received.']);
@@ -283,16 +300,9 @@ test('authenticated booking confirmation queues work and captures payment from a
         'transaction_id' => 987654321,
     ]);
 
-    $queuedCapture = DB::table('jobs')->where('queue', 'default')->first();
-    expect($queuedCapture?->payload)->toContain('ProcessPaymobPayment');
+    Queue::assertPushed(ProcessPaymobPayment::class, 1);
 
-    runQueuedJobsUntilEmpty('bookings,default');
-
-    expect(DB::table('jobs')->whereIn('queue', ['bookings', 'default'])->count())->toBe(0);
-    expect($processedJobs)->toContain(
-        ['queue' => 'bookings', 'name' => SendBookingConfirmation::class],
-        ['queue' => 'default', 'name' => ProcessPaymobPayment::class],
-    );
+    processPaymobCapture($booking);
 
     Http::assertSent(fn (Request $request): bool => $request->url() === paymobBaseUrl().'/api/acceptance/capture?token=auth-token'
         && $request['transaction_id'] === 987654321
@@ -375,6 +385,8 @@ test('duplicate Paymob webhook delivery records one event and captures one charg
 
     $payload = signedPaymobWebhookPayload();
 
+    Queue::fake([ProcessPaymobPayment::class]);
+
     $this->postJson('/paymob/webhook', $payload)
         ->assertOk()
         ->assertJson(['message' => 'Webhook received.']);
@@ -383,9 +395,11 @@ test('duplicate Paymob webhook delivery records one event and captures one charg
         ->assertJson(['message' => 'Webhook already processed.']);
 
     expect(PaymobWebhookEvent::query()->where('transaction_id', 987654321)->count())->toBe(1)
-        ->and(DB::table('jobs')->where('queue', 'default')->count())->toBe(1);
+        ->and(DB::table('jobs')->where('queue', 'default')->count())->toBe(0);
 
-    runQueuedJob();
+    Queue::assertPushed(ProcessPaymobPayment::class, 1);
+
+    processPaymobCapture($booking);
 
     expect(Payment::query()->where('status', 'captured')->count())->toBe(1);
 
@@ -411,11 +425,15 @@ test('competing bookings for one slot leave one confirmed booking, one rejection
 
     confirmBookingThroughHttp($customer, $booking)->assertOk();
 
+    Queue::fake([ProcessPaymobPayment::class]);
+
     $this->postJson('/paymob/webhook', signedPaymobWebhookPayload())
         ->assertOk()
         ->assertJson(['message' => 'Webhook received.']);
 
-    runQueuedJob();
+    Queue::assertPushed(ProcessPaymobPayment::class, 1);
+
+    processPaymobCapture($booking);
 
     expect(Booking::query()->where('slot_id', $slot->id)->count())->toBe(1)
         ->and(Booking::query()->where('slot_id', $slot->id)->where('status', 'confirmed')->count())->toBe(1)
