@@ -62,6 +62,7 @@ class BookingService
      */
     public function updateExistingBooking(Booking $booking, array $data): Booking
     {
+        $wasConfirmed = $booking->status === 'confirmed';
         $updated = $this->bookingRepository->update($data, $booking->id);
 
         if (! $updated) {
@@ -72,8 +73,10 @@ class BookingService
 
         $updatedBooking = $this->bookingRepository->find($booking->id);
 
+        $becameConfirmed = ! $wasConfirmed && $updatedBooking->status === 'confirmed';
+
         SendBookingConfirmation::dispatchIf(
-            $updatedBooking->status === 'confirmed',
+            $becameConfirmed,
             $updatedBooking,
         )->afterCommit();
 
