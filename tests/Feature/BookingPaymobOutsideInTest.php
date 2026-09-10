@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\SendBookingConfirmation;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Resource;
@@ -7,10 +8,9 @@ use App\Models\Slot;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
-use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Paymob\Laravel\Contracts\PaymobClientContract;
 use Paymob\Laravel\Jobs\ProcessPaymobPayment;
 use Paymob\Laravel\Models\Payment;
@@ -325,13 +325,13 @@ test('invalid Paymob webhook signature is rejected without a capture', function 
     $payload = signedPaymobWebhookPayload();
     $payload['hmac'] = str_repeat('0', 128);
 
-    Bus::fake([ProcessPaymobPayment::class]);
+    Queue::fake([ProcessPaymobPayment::class]);
 
     $this->postJson('/paymob/webhook', $payload)->assertForbidden();
 
     expect(PaymobWebhookEvent::query()->count())->toBe(0)
         ->and(Payment::query()->where('status', 'captured')->count())->toBe(0);
-    Bus::assertNotDispatched(ProcessPaymobPayment::class);
+    Queue::assertNotPushed(ProcessPaymobPayment::class);
 
     Http::assertNotSent(fn (Request $request): bool => $request->url() === paymobBaseUrl().'/api/acceptance/capture?token=auth-token');
 });
@@ -349,7 +349,7 @@ test('duplicate Paymob webhook delivery records one event and captures one charg
 
     $payload = signedPaymobWebhookPayload();
 
-    Bus::fake([ProcessPaymobPayment::class]);
+    Queue::fake([ProcessPaymobPayment::class]);
 
     $this->postJson('/paymob/webhook', $payload)
         ->assertOk()
