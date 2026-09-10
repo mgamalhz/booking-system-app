@@ -3017,7 +3017,7 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/mgamaltech/laravel-paymob.git",
-                "reference": "bdcc438ae05b925aaa37258bf0b988f94704bea0"
+                "reference": "5c9ccc2d3a21d9b4c79288d76d3fe37f48189050"
             },
             "require": {
                 "illuminate/support": "^10.0|^11.0|^12.0|^13.0",
@@ -3052,7 +3052,7 @@
                 "MIT"
             ],
             "description": "Laravel integration package for Paymob payments.",
-            "time": "2026-09-08T10:51:55+00:00"
+            "time": "2026-09-09T13:41:44+00:00"
         },
         {
             "name": "phpoption/phpoption",
