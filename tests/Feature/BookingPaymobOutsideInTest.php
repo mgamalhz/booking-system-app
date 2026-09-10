@@ -12,7 +12,6 @@ use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Worker;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Paymob\Laravel\Contracts\PaymobClientContract;
@@ -231,7 +230,7 @@ test('authenticated booking confirmation queues work and captures payment from a
     fakeSuccessfulPaymobStartAndCapture();
     $processedJobs = [];
 
-    Event::listen(JobProcessed::class, function (JobProcessed $event) use (&$processedJobs): void {
+    Queue::after(function (JobProcessed $event) use (&$processedJobs): void {
         $processedJobs[] = [
             'queue' => $event->job->getQueue(),
             'name' => $event->job->resolveName(),
