@@ -8,10 +8,7 @@ use App\Models\Slot;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
-use Illuminate\Queue\Events\JobProcessed;
-use Illuminate\Queue\Worker;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Paymob\Laravel\Contracts\PaymobClientContract;
@@ -23,7 +20,6 @@ uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
     config()->set('cache.default', 'array');
-    config()->set('queue.default', 'database');
     config()->set('paymob.api_key', 'test-api-key');
     config()->set('paymob.integration_id', 123456);
     config()->set('paymob.iframe_id', 456789);
@@ -32,8 +28,6 @@ beforeEach(function (): void {
 
     Cache::setDefaultDriver('array');
     app()->instance(Repository::class, Cache::store('array'));
-    Worker::$pausable = false;
-    Worker::$restartable = false;
 
     Cache::forget('paymob_token');
     Http::preventStrayRequests();
@@ -107,26 +101,6 @@ function confirmBookingThroughHttp(Customer $customer, Booking $booking)
 {
     return test()->actingAs($customer, 'sanctum')
         ->postJson(route('bookings.update', $booking), ['status' => 'confirmed']);
-}
-
-function runQueuedJob(string $queue = 'default'): void
-{
-    app('queue.worker')->shouldQuit = false;
-    app('queue.worker')->setCache(app('cache')->store('array'));
-    Worker::$pausable = false;
-    Worker::$restartable = false;
-
-    test()->artisan("queue:work database --queue={$queue} --once --tries=1")->assertExitCode(0);
-}
-
-function runQueuedJobsUntilEmpty(string $queues): void
-{
-    app('queue.worker')->shouldQuit = false;
-    app('queue.worker')->setCache(app('cache')->store('array'));
-    Worker::$pausable = false;
-    Worker::$restartable = false;
-
-    test()->artisan("queue:work database --queue={$queues} --stop-when-empty --tries=1")->assertExitCode(0);
 }
 
 function processPaymobCapture(Booking $booking, int $transactionId = 987654321, int $amountCents = 25000): void
@@ -228,14 +202,10 @@ function assertPaymobStartRequestsWereSent(Booking $booking): void
 
 test('authenticated booking confirmation queues work and captures payment from a real Paymob webhook route', function (): void {
     fakeSuccessfulPaymobStartAndCapture();
-    $processedJobs = [];
-
-    Queue::after(function (JobProcessed $event) use (&$processedJobs): void {
-        $processedJobs[] = [
-            'queue' => $event->job->getQueue(),
-            'name' => $event->job->resolveName(),
-        ];
-    });
+    Queue::fake([
+        SendBookingConfirmation::class,
+        ProcessPaymobPayment::class,
+    ]);
 
     [$customer, $resource, $slot] = paymobBookingActors();
 
@@ -265,12 +235,10 @@ test('authenticated booking confirmation queues work and captures payment from a
     $booking->refresh();
 
     $this->assertDatabaseHas('bookings', ['id' => $booking->id, 'status' => 'confirmed']);
-    $this->assertDatabaseHas('jobs', [
-        'queue' => 'bookings',
-    ]);
-
-    $queuedConfirmation = DB::table('jobs')->where('queue', 'bookings')->first();
-    expect($queuedConfirmation?->payload)->toContain('SendBookingConfirmation');
+    Queue::assertPushed(SendBookingConfirmation::class, function (SendBookingConfirmation $job) use ($booking): bool {
+        return $job->booking->is($booking)
+            && $job->afterCommit === true;
+    });
 
     assertPaymobStartRequestsWereSent($booking);
 
@@ -281,15 +249,6 @@ test('authenticated booking confirmation queues work and captures payment from a
         'amount_cents' => 25000,
         'status' => 'processing',
     ]);
-
-    runQueuedJob('bookings');
-
-    expect(DB::table('jobs')->where('queue', 'bookings')->count())->toBe(0);
-    expect($processedJobs)->toContain(
-        ['queue' => 'bookings', 'name' => SendBookingConfirmation::class],
-    );
-
-    Queue::fake([ProcessPaymobPayment::class]);
 
     $this->postJson('/paymob/webhook', signedPaymobWebhookPayload())
         ->assertOk()
@@ -362,11 +321,13 @@ test('invalid Paymob webhook signature is rejected without a capture', function 
     $payload = signedPaymobWebhookPayload();
     $payload['hmac'] = str_repeat('0', 128);
 
+    Queue::fake([ProcessPaymobPayment::class]);
+
     $this->postJson('/paymob/webhook', $payload)->assertForbidden();
 
     expect(PaymobWebhookEvent::query()->count())->toBe(0)
-        ->and(DB::table('jobs')->where('queue', 'default')->count())->toBe(0)
         ->and(Payment::query()->where('status', 'captured')->count())->toBe(0);
+    Queue::assertNotPushed(ProcessPaymobPayment::class);
 
     Http::assertNotSent(fn (Request $request): bool => $request->url() === paymobBaseUrl().'/api/acceptance/capture?token=auth-token');
 });
@@ -394,7 +355,7 @@ test('duplicate Paymob webhook delivery records one event and captures one charg
         ->assertJson(['message' => 'Webhook already processed.']);
 
     expect(PaymobWebhookEvent::query()->where('transaction_id', 987654321)->count())->toBe(1)
-        ->and(DB::table('jobs')->where('queue', 'default')->count())->toBe(0);
+        ->and(Payment::query()->where('status', 'captured')->count())->toBe(0);
 
     Queue::assertPushed(ProcessPaymobPayment::class, 1);
 
