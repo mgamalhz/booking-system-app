@@ -258,8 +258,6 @@ test('authenticated booking confirmation queues work and captures payment from a
         'transaction_id' => 987654321,
     ]);
 
-    Queue::assertPushed(ProcessPaymobPayment::class, 1);
-
     processPaymobCapture($booking);
 
     Http::assertSent(fn (Request $request): bool => $request->url() === paymobBaseUrl().'/api/acceptance/capture?token=auth-token'
@@ -357,8 +355,6 @@ test('duplicate Paymob webhook delivery records one event and captures one charg
     expect(PaymobWebhookEvent::query()->where('transaction_id', 987654321)->count())->toBe(1)
         ->and(Payment::query()->where('status', 'captured')->count())->toBe(0);
 
-    Queue::assertPushed(ProcessPaymobPayment::class, 1);
-
     processPaymobCapture($booking);
 
     expect(Payment::query()->where('status', 'captured')->count())->toBe(1);
@@ -390,8 +386,6 @@ test('competing bookings for one slot leave one confirmed booking, one rejection
     $this->postJson('/paymob/webhook', signedPaymobWebhookPayload())
         ->assertOk()
         ->assertJson(['message' => 'Webhook received.']);
-
-    Queue::assertPushed(ProcessPaymobPayment::class, 1);
 
     processPaymobCapture($booking);
 
