@@ -55,5 +55,6 @@ test('it rejects invalid login credentials', function () {
         'password' => 'wrong-password',
     ])
         ->assertUnprocessable()
-        ->assertJsonValidationErrors('email');
+        ->assertJsonPath('error.code', 'validation_failed')
+        ->assertJsonStructure(['error' => ['details' => ['fields' => ['email']]]]);
 });
