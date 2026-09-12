@@ -23,16 +23,18 @@ class SlotAvailabilityService
     ): array {
         $criteria = new AvailabilityCriteria($startDate, $endDate, $timezone, $filters);
 
-        return $this->cache->remember(
-            $resource,
-            $criteria,
-            fn (): array => $this->availabilityRepository->availableForResource(
+        $slots = $this
+            ->availabilityRepository->availableForResource(
                 $resource,
                 $startDate,
                 $endDate,
                 $timezone,
-                $filters
-            )
+                $filters);
+
+        return $this->cache->remember(
+            $resource,
+            $criteria,
+            $slots
         );
     }
 }
