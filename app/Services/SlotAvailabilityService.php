@@ -21,33 +21,20 @@ class SlotAvailabilityService
         string $timezone,
         array $filters = [],
     ): array {
-        return $this->forResourceId($resource->id, $startDate, $endDate, $timezone, $filters);
-    }
-
-    public function forResourceId(
-        int $resourceId,
-        string $startDate,
-        string $endDate,
-        string $timezone,
-        array $filters = [],
-    ): array {
         $criteria = new AvailabilityCriteria($startDate, $endDate, $timezone, $filters);
 
-        return $this->cache->remember($resourceId, $criteria,
-            function () use ($resourceId, $startDate, $endDate, $timezone, $filters): array {
-                $resource = Resource::query()
-                    ->whereKey($resourceId)
-                    ->where('status', 'active')
-                    ->firstOrFail();
+        $slots = $this
+            ->availabilityRepository->availableForResource(
+                $resource,
+                $startDate,
+                $endDate,
+                $timezone,
+                $filters);
 
-                return $this->availabilityRepository->availableForResource(
-                    $resource,
-                    $startDate,
-                    $endDate,
-                    $timezone,
-                    $filters
-                );
-            }
+        return $this->cache->remember(
+            $resource,
+            $criteria,
+            $slots
         );
     }
 }
