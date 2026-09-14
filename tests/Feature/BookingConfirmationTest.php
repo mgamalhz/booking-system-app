@@ -54,7 +54,7 @@ function swapPaymobClientForBookingConfirmationTest(): void
     });
 }
 
-test('it dispatches booking confirmation job after a booking is confirmed', function () {
+test('it does not dispatch booking confirmation job while payment is processing', function () {
     Queue::fake();
     swapPaymobClientForBookingConfirmationTest();
 
@@ -70,7 +70,25 @@ test('it dispatches booking confirmation job after a booking is confirmed', func
             'status' => 'confirmed',
         ])
         ->assertOk()
+        ->assertJsonPath('booking.status', 'pending')
         ->assertJsonPath('payment.payment_key', 'payment-token');
+
+    Queue::assertNotPushed(SendBookingConfirmation::class);
+});
+
+test('it dispatches booking confirmation job after verified payment capture', function () {
+    Queue::fake();
+
+    $booking = Booking::factory()->create([
+        'status' => 'pending',
+    ]);
+
+    $booking->markPaymobCaptured(new CapturePaymentResponseDto([
+        'success' => true,
+        'transaction_id' => 123456,
+    ]));
+
+    expect($booking->fresh()->status)->toBe('confirmed');
 
     Queue::assertPushed(SendBookingConfirmation::class, function (SendBookingConfirmation $job) use ($booking) {
         return $job->booking->is($booking)

@@ -20,7 +20,7 @@ class BookingEventTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_booking_confirmation_job_is_pushed_when_booking_is_updated()
+    public function test_booking_confirmation_job_is_not_pushed_while_payment_is_processing()
     {
         Queue::fake();
         $this->swapPaymobClient();
@@ -30,10 +30,8 @@ class BookingEventTest extends TestCase
             ->post(route('bookings.update', $booking), ['status' => 'confirmed'])
             ->assertOk();
 
-        Queue::assertPushed(SendBookingConfirmation::class, function (SendBookingConfirmation $job) use ($booking) {
-            return $job->booking->is($booking)
-                && $job->afterCommit === true;
-        });
+        $this->assertSame('pending', $booking->fresh()->status);
+        Queue::assertNotPushed(SendBookingConfirmation::class);
 
     }
 
@@ -48,22 +46,22 @@ class BookingEventTest extends TestCase
         Queue::assertNotPushed(SendBookingConfirmation::class);
     }
 
-    public function test_booking_confirmation_job_is_marked_to_dispatch_after_commit(): void
+    public function test_booking_confirmation_job_is_marked_to_dispatch_after_commit_after_payment_capture(): void
     {
         Queue::fake();
-        $this->swapPaymobClient();
 
         $booking = Booking::factory()->create([
             'status' => 'pending',
         ]);
 
-        $this->actingAs(Customer::query()->findOrFail($booking->customer_id), 'sanctum')
-            ->post(route('bookings.update', $booking), [
-                'status' => 'confirmed',
-            ]);
+        $booking->markPaymobCaptured(new CapturePaymentResponseDto([
+            'success' => true,
+            'transaction_id' => 123456,
+        ]));
 
-        Queue::assertPushed(SendBookingConfirmation::class, function (SendBookingConfirmation $job) {
-            return $job->afterCommit === true;
+        Queue::assertPushed(SendBookingConfirmation::class, function (SendBookingConfirmation $job) use ($booking) {
+            return $job->booking->is($booking)
+                && $job->afterCommit === true;
         });
     }
 

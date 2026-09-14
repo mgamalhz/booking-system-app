@@ -27,8 +27,6 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
      */
     protected function gate(): void
     {
-        Gate::define('viewHorizon', function () {
-            return true;
-        });
+        Gate::define('viewHorizon', fn ($user = null): bool => $user?->email === 'dmin@admin.com');
     }
 }

@@ -54,6 +54,11 @@ class BookingController extends Controller
         abort_if((int) $booking->customer_id !== (int) auth()->id(), 403);
 
         $validated = $request->validated();
+        $shouldStartPayment = ($validated['status'] ?? null) === 'confirmed';
+
+        if ($shouldStartPayment) {
+            $validated['status'] = 'pending';
+        }
 
         $booking = DB::transaction(function () use ($validated, $booking, $bookingService) {
             $booking = $bookingService->updateExistingBooking($booking, $validated);
@@ -67,7 +72,7 @@ class BookingController extends Controller
             'message' => 'Booking updated successfully',
         ];
 
-        if (($validated['status'] ?? null) === 'confirmed' && $booking->status === 'confirmed') {
+        if ($shouldStartPayment) {
             $response['payment'] = $bookingPaymentService->startPaymentForBooking($booking, (int) auth()->id());
         }
 

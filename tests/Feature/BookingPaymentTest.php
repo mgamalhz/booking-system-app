@@ -168,10 +168,15 @@ test('it starts payment when a booking is confirmed', function () {
         ->postJson(route('bookings.update', $booking), ['status' => 'confirmed'])
         ->assertOk()
         ->assertJsonPath('success', true)
-        ->assertJsonPath('booking.status', 'confirmed')
+        ->assertJsonPath('booking.status', 'pending')
         ->assertJsonPath('payment.payment_key', 'payment-token')
         ->assertJsonPath('payment.paymob_order_id', 987654)
         ->assertJsonPath('payment.redirect_url', rtrim((string) config('paymob.base_url'), '/').'/api/acceptance/iframes/456?payment_token=payment-token');
+
+    $this->assertDatabaseHas('bookings', [
+        'id' => $booking->id,
+        'status' => 'pending',
+    ]);
 
     $this->assertDatabaseHas('payments', [
         'paymob_reference' => '987654',
@@ -231,7 +236,7 @@ test('it records a failed payment and returns a clean error when paymob cannot s
 
     $this->assertDatabaseHas('bookings', [
         'id' => $booking->id,
-        'status' => 'confirmed',
+        'status' => 'pending',
     ]);
 
     $this->assertDatabaseHas('payments', [
