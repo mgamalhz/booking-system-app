@@ -52,12 +52,21 @@ class BookingService
      */
     public function updateExistingBooking(Booking $booking, array $data): Booking
     {
+        $fromStatus = (string) $booking->status;
+        $toStatus = array_key_exists('status', $data) ? (string) $data['status'] : $fromStatus;
+        $statusChanged = $fromStatus !== $toStatus;
+        $occurredAt = now()->toISOString();
+
+        if ($statusChanged && ! $this->canTransition($fromStatus, $toStatus)) {
+            throw InvalidBookingStatusTransition::for($booking->id, $fromStatus, $toStatus);
+        }
+
         // Route model binding already loaded this row. Updating it directly avoids
         // re-reading the booking and all three globally eager-loaded relations.
         $booking->update($data);
         $updatedBooking = $booking->refresh()->loadMissing(['slot', 'resource', 'customer']);
 
-        match ($toStatus) {
+        match ($statusChanged ? $toStatus : null) {
             'confirmed' => BookingConfirmed::dispatch(
                 $updatedBooking->id,
                 $updatedBooking->customer_id,
@@ -89,6 +98,14 @@ class BookingService
         };
 
         return $updatedBooking;
+    }
+
+    /**
+     * @throws InvalidBookingStatusTransition
+     */
+    public function transitionStatus(Booking $booking, string $toStatus): Booking
+    {
+        return $this->updateExistingBooking($booking, ['status' => $toStatus]);
     }
 
     private function canTransition(string $fromStatus, string $toStatus): bool
