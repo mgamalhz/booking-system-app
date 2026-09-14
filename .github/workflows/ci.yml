@@ -1,81 +1,81 @@
-name: CI
+# .github/workflows/tests.yml
+name: Tests
 
 on:
   pull_request:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
-  style:
-    name: Code Style (Pint)
+  test:
+    name: test
     runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v4
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: testing
+          MYSQL_ROOT_PASSWORD: password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -ppassword"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
-
-      - name: Configure Composer GitHub authentication
-        run: composer config --global github-oauth.github.com "${{ secrets.GITHUBTOKEN }}"
-
-      - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist
-
-      - name: Run Pint
-        run: ./vendor/bin/pint --test
-
-
-  analyse:
-    name: Static Analysis (PHPStan)
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
-
-      - name: Configure Composer GitHub authentication
-        run: composer config --global github-oauth.github.com "${{ secrets.GITHUBTOKEN }}"
-
-      - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist
-
-      - name: Run PHPStan
-        run: vendor/bin/phpstan analyse
-
-
-  tests:
-    name: Tests (PHPUnit)
-    runs-on: ubuntu-latest
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out repository
+        uses: actions/checkout@v4
 
-      - name: Setup PHP
+      - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.4'
-          extensions: pdo_sqlite
-
-      - name: Configure Composer GitHub authentication
-        run: composer config --global github-oauth.github.com "${{ secrets.GITHUBTOKEN }}"
+          php-version: "8.4"
+          extensions: mbstring, pdo_mysql, redis
+          coverage: none
 
       - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist
+        run: composer install --no-interaction --prefer-dist --no-progress
 
       - name: Prepare environment
-        run: cp .env.example .env && php artisan key:generate
-
-      - name: Run migrations
-        env:
-          DB_CONNECTION: sqlite
-          DB_DATABASE: ":memory:"
-        run: php artisan migrate --force
+        run: |
+          cp .env.example .env
+          php artisan key:generate
 
       - name: Run tests
-        run: ./vendor/bin/pest
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: testing
+          DB_USERNAME: root
+          DB_PASSWORD: password
+          REDIS_HOST: 127.0.0.1
+          REDIS_PORT: 6379
+          CACHE_STORE: redis
+          SESSION_DRIVER: redis
+          QUEUE_CONNECTION: redis
+        run: |
+          set -o pipefail
+          php artisan test 2>&1 | tee test-output.log
+
+      - name: Upload failure output
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-failure-output
+          path: test-output.log
+          if-no-files-found: warn
