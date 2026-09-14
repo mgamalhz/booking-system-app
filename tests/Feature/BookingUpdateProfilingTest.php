@@ -1,5 +1,6 @@
 <?php
 
+use App\Events\BookingCancelled;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Resource;
@@ -7,10 +8,14 @@ use App\Models\Slot;
 use App\Services\BookingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 
 uses(RefreshDatabase::class);
 
 it('updates with one refresh instead of three redundant hydrated reads', function () {
+    config(['cache.default' => 'array']);
+    Event::fake([BookingCancelled::class]);
+
     $customer = Customer::factory()->create();
     $resource = Resource::factory()->create();
     $slot = Slot::factory()->create();
