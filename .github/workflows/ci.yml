@@ -22,7 +22,7 @@ jobs:
           php-version: "8.4"
 
       - name: Configure Composer authentication
-        run: composer config --global github-oauth.github.com "${{ secrets.GITHUB_TOKEN }}"
+        run: composer config --global github-oauth.github.com "${{ secrets.GITHUBTOKEN }}"
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
@@ -43,7 +43,7 @@ jobs:
           php-version: "8.4"
 
       - name: Configure Composer authentication
-        run: composer config --global github-oauth.github.com "${{ secrets.GITHUB_TOKEN }}"
+        run: composer config --global github-oauth.github.com "${{ secrets.GITHUBTOKEN }}"
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
@@ -70,7 +70,7 @@ jobs:
           extensions: pdo_sqlite
 
       - name: Configure Composer authentication
-        run: composer config --global github-oauth.github.com "${{ secrets.GITHUB_TOKEN }}"
+        run: composer config --global github-oauth.github.com "${{ secrets.GITHUBTOKEN }}"
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
