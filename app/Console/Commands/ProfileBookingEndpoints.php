@@ -15,11 +15,36 @@ use Illuminate\Queue\Events\JobQueued;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 
+/**
+ * @phpstan-type EndpointMetric array{
+ *     latency_ms: list<float>,
+ *     queries: int,
+ *     query_ms: float,
+ *     cache_hits: int,
+ *     cache_misses: int,
+ *     jobs: int,
+ *     external_requests: int,
+ *     statuses: list<int>
+ * }
+ * @phpstan-type EndpointSummary array{
+ *     queries: int,
+ *     query_ms: float,
+ *     cache_hits: int,
+ *     cache_misses: int,
+ *     jobs: int,
+ *     external_requests: int,
+ *     statuses: list<int>,
+ *     latency_p50_ms: float,
+ *     latency_p95_ms: float,
+ *     queries_per_request: float,
+ *     query_ms_per_request: float
+ * }
+ */
 class ProfileBookingEndpoints extends Command
 {
     private ?string $activeEndpoint = null;
 
-    /** @var array<string, array<string, mixed>> */
+    /** @var array<string, EndpointMetric> */
     private array $metrics = [];
 
     protected $signature = 'profile:booking-endpoints {--iterations=10} {--output=storage/app/profiling/latest.json}';
@@ -115,6 +140,10 @@ class ProfileBookingEndpoints extends Command
         $this->activeEndpoint = null;
     }
 
+    /**
+     * @param  array<string, EndpointMetric>  $metrics
+     * @return array<string, EndpointSummary>
+     */
     private function summarize(array $metrics, int $iterations): array
     {
         foreach ($metrics as &$row) {

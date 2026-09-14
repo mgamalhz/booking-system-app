@@ -10,6 +10,7 @@ use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\ValidationException;
 
 class BookingService
 {
@@ -70,6 +71,7 @@ class BookingService
         }
 
         $updatedBooking = $this->bookingRepository->find($booking->id);
+        $updatedBooking = $booking->refresh()->loadMissing(['slot', 'resource', 'customer']);
 
         SendBookingConfirmation::dispatchIf(
             $updatedBooking->status === 'confirmed',
