@@ -62,7 +62,7 @@ class BookingService
      */
     public function updateExistingBooking(Booking $booking, array $data): Booking
     {
-        $updated = $this->bookingRepository->update($data, $booking->id);
+        $updated = $booking->update($data);
 
         if (! $updated) {
             throw ValidationException::withMessages([
@@ -70,7 +70,6 @@ class BookingService
             ]);
         }
 
-        $updatedBooking = $this->bookingRepository->find($booking->id);
         $updatedBooking = $booking->refresh()->loadMissing(['slot', 'resource', 'customer']);
 
         SendBookingConfirmation::dispatchIf(
