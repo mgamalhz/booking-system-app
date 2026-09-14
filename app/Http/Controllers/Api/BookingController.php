@@ -53,8 +53,10 @@ class BookingController extends Controller
     ): JsonResponse {
         abort_if((int) $booking->customer_id !== (int) auth()->id(), 403);
 
-        $booking = DB::transaction(function () use ($request, $booking, $bookingService) {
-            return $bookingService->updateExistingBooking($booking, $request->validated());
+        $validated = $request->validated();
+
+        $booking = DB::transaction(function () use ($validated, $booking, $bookingService) {
+            return $bookingService->updateExistingBooking($booking, $validated);
         });
 
         $response = [
