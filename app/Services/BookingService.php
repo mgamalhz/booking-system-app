@@ -71,6 +71,7 @@ class BookingService
         }
 
         $updatedBooking = $this->bookingRepository->find($booking->id);
+        $updatedBooking = $booking->refresh()->loadMissing(['slot', 'resource', 'customer']);
 
         SendBookingConfirmation::dispatchIf(
             $updatedBooking->status === 'confirmed',

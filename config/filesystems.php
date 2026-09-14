@@ -70,6 +70,7 @@ return [
             'endpoint' => env('AWS_ENDPOINT'),
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
             'visibility' => 'private',
+            'orphan_cleanup_grace_minutes' => env('DOCUMENTS_ORPHAN_CLEANUP_GRACE_MINUTES', 15),
             'throw' => true,
             'report' => false,
         ],
