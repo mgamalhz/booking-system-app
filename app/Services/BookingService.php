@@ -62,16 +62,9 @@ class BookingService
      */
     public function updateExistingBooking(Booking $booking, array $data): Booking
     {
-        $wasConfirmed = $booking->status === 'confirmed';
-        $updated = $this->bookingRepository->update($data, $booking->id);
-
-        if (! $updated) {
-            throw ValidationException::withMessages([
-                'booking' => ['Booking could not be updated.'],
-            ]);
-        }
-
-        $updatedBooking = $this->bookingRepository->find($booking->id);
+        
+        $booking->update($data);
+        $updatedBooking = $booking->refresh()->loadMissing(['slot', 'resource', 'customer']);
 
         $becameConfirmed = ! $wasConfirmed && $updatedBooking->status === 'confirmed';
 
