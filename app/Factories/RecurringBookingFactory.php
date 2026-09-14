@@ -31,6 +31,9 @@ class RecurringBookingFactory implements BookingFactoryInterface
 
             foreach ($dates as $date) {
                 $slot = Slot::whereDate('date', $date)->where('start_time', $data['start_time'])->first();
+                if ($slot === null) {
+                    throw new \Exception("No slot exists for date {$date->toDateString()}.");
+                }
 
                 $alreadyBooked = Booking::where('slot_id', $slot->id)
                     ->whereIn('status', ['confirmed', 'pending'])
@@ -51,6 +54,10 @@ class RecurringBookingFactory implements BookingFactoryInterface
                 ]);
 
                 $firstBooking ??= $booking;
+            }
+
+            if ($firstBooking === null) {
+                throw new \Exception('The recurrence does not contain any booking dates.');
             }
 
             return $firstBooking;

@@ -30,7 +30,7 @@ class AuthService
     {
         $customer = $this->customerRepository->findByEmail($data['email']);
 
-        if (! $customer || ! Hash::check($data['password'], $customer->password)) {
+        if (! $customer || ! is_string($customer->password) || ! Hash::check($data['password'], $customer->password)) {
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
             ]);

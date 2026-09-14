@@ -22,7 +22,7 @@ class BookingController extends Controller
             $booking = DB::transaction(function () use ($request, $bookingService) {
                 $booking = $bookingService->createBookingForCustomer($request->validated(), (int) auth()->id());
 
-                return $booking->fresh();
+                return $booking->refresh();
             });
         } catch (LockTimeoutException) {
             return response()->json([
@@ -58,7 +58,7 @@ class BookingController extends Controller
         $booking = DB::transaction(function () use ($validated, $booking, $bookingService) {
             $booking = $bookingService->updateExistingBooking($booking, $validated);
 
-            return $booking->fresh();
+            return $booking->refresh();
         });
 
         $response = [

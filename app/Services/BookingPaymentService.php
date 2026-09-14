@@ -56,6 +56,12 @@ class BookingPaymentService
 
         $amountCents = $this->amountCents($booking);
         $billingData = $this->billingData($booking);
+        $resource = $booking->resource;
+        if ($resource === null) {
+            throw ValidationException::withMessages([
+                'booking' => ['The booking resource no longer exists.'],
+            ]);
+        }
         $integrationId = (int) config('paymob.integration_id');
         $paymentReference = 'booking-'.$booking->id.'-'.Str::uuid();
 
@@ -79,7 +85,7 @@ class BookingPaymentService
                 paymentMethodIds: [],
                 items: [
                     new OrderItemDto(
-                        name: $booking->resource->name,
+                        name: $resource->name,
                         amount: $amountCents,
                     ),
                 ],
@@ -168,7 +174,14 @@ class BookingPaymentService
 
     private function amountCents(Booking $booking): int
     {
-        return (int) $booking->resource->price * 100;
+        $resource = $booking->resource;
+        if ($resource === null) {
+            throw ValidationException::withMessages([
+                'booking' => ['The booking resource no longer exists.'],
+            ]);
+        }
+
+        return (int) $resource->price * 100;
     }
 
     private function billingData(Booking $booking): BillingDataDto

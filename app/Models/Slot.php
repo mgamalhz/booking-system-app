@@ -10,9 +10,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
-/**
- * @method static findOrFail(mixed $slot_id)
- */
 class Slot extends Model
 {
     /** @use HasFactory<SlotFactory> */
