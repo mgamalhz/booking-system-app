@@ -1,0 +1,10 @@
+# .github/workflows/ci.yml
+name: CI
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: php artisan test
+      # ^ No checkout, no PHP, no extensions, no vendor/.
+      #   The runner has an empty filesystem and default PHP.
