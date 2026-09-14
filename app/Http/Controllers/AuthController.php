@@ -11,7 +11,12 @@ class AuthController extends Controller
 {
     public function register(RegisterRequest $request, AuthService $authService): JsonResponse
     {
-        $auth = $authService->register($request->validated());
+        $data = array_merge($request->validated(), [
+            'name' => $request->string('name')->toString(),
+            'email' => $request->string('email')->toString(),
+            'password' => $request->string('password')->toString(),
+        ]);
+        $auth = $authService->register($data);
 
         return response()->json([
             'customer' => $auth['customer'],
@@ -21,7 +26,10 @@ class AuthController extends Controller
 
     public function login(LoginRequest $request, AuthService $authService): JsonResponse
     {
-        $auth = $authService->login($request->validated());
+        $auth = $authService->login([
+            'email' => $request->string('email')->toString(),
+            'password' => $request->string('password')->toString(),
+        ]);
 
         return response()->json([
             'customer' => $auth['customer'],

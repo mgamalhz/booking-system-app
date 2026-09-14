@@ -71,11 +71,12 @@ class ProfileBookingEndpoints extends Command
         }
 
         DB::listen(function ($query): void {
-            if ($this->activeEndpoint === null) {
+            $endpoint = $this->activeEndpoint;
+            if ($endpoint === null || ! isset($this->metrics[$endpoint])) {
                 return;
             }
-            $this->metrics[$this->activeEndpoint]['queries']++;
-            $this->metrics[$this->activeEndpoint]['query_ms'] += $query->time;
+            $this->metrics[$endpoint]['queries']++;
+            $this->metrics[$endpoint]['query_ms'] += $query->time;
         });
         Event::listen(CacheHit::class, function (): void {
             if ($this->activeEndpoint !== null) {
@@ -99,13 +100,20 @@ class ProfileBookingEndpoints extends Command
         });
 
         for ($i = 0; $i < $iterations; $i++) {
+            $freeSlot = $freeSlots->get($i);
+            if ($freeSlot === null) {
+                $this->error('A free slot disappeared while the profiling workload was running.');
+
+                return self::FAILURE;
+            }
+
             $this->measure($kernel, 'POST /api/login', Request::create('/api/login', 'POST', [
                 'email' => 'profile@example.test', 'password' => 'profile-password',
             ]));
 
             $this->measure($kernel, 'POST /api/booking', Request::create('/api/booking', 'POST', [
                 'customer_id' => $customer->id, 'resource_id' => $booking->resource_id,
-                'slot_id' => $freeSlots[$i]->id, 'type' => 'one-on-one',
+                'slot_id' => $freeSlot->id, 'type' => 'one-on-one',
             ], [], [], ['HTTP_ACCEPT' => 'application/json', 'HTTP_AUTHORIZATION' => "Bearer {$token}"]));
 
             $this->measure($kernel, 'POST /api/booking/{id}/update', Request::create("/api/booking/{$booking->id}/update", 'POST', [

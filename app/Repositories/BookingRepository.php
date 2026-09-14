@@ -33,7 +33,7 @@ class BookingRepository implements BookingCancellationRepositoryInterface, Booki
 
     public function delete(int $id): bool
     {
-        return $this->find($id)->delete();
+        return $this->find($id)->delete() === true;
     }
 
     /**
@@ -46,7 +46,6 @@ class BookingRepository implements BookingCancellationRepositoryInterface, Booki
 
     public function find(int $id): Booking
     {
-        /** @var Booking|null $booking */
         $booking = Booking::query()->findOrFail($id);
 
         return $booking;

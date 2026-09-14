@@ -40,10 +40,9 @@ class BookingService
         return Cache::lock("slot:{$data['slot_id']}:book", $ttl)
             ->block($waitSeconds, function () use ($data) {
                 $booking = $this->createBooking($data);
-                SendBookingConfirmation::dispatchIf(
-                    $booking->status === 'confirmed',
-                    $booking,
-                )->afterCommit();
+                if ($booking->status === 'confirmed') {
+                    SendBookingConfirmation::dispatch($booking)->afterCommit();
+                }
 
                 return $booking;
             });
@@ -72,10 +71,9 @@ class BookingService
 
         $updatedBooking = $booking->refresh()->loadMissing(['slot', 'resource', 'customer']);
 
-        SendBookingConfirmation::dispatchIf(
-            $updatedBooking->status === 'confirmed',
-            $updatedBooking,
-        )->afterCommit();
+        if ($updatedBooking->status === 'confirmed') {
+            SendBookingConfirmation::dispatch($updatedBooking)->afterCommit();
+        }
 
         return $updatedBooking;
     }
