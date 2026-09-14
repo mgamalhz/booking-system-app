@@ -125,6 +125,8 @@ jobs:
         run: php artisan migrate --force --seed
 
       - name: Run test
+        env:
+          XDEBUG_MODE: coverage
         run: ./vendor/bin/pest --coverage --min=80 --coverage-clover=coverage.xml --coverage-html=coverage-report
 
       - name: Upload coverage report
