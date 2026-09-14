@@ -1,10 +1,6 @@
 <?php
 
 use App\Jobs\SendBookingReminder;
-use Illuminate\Foundation\Inspiring;
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\DB;
-
 
 Schedule::useCache('database');
 
