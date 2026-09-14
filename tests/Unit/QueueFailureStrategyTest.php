@@ -22,11 +22,38 @@ test('booking confirmation notification has a bounded retry policy', function ()
         ->and($notification->backoff)->toBe([10, 30, 60, 120]);
 });
 
+test('booking confirmation notification defines channels mail content and database payload', function () {
+    $booking = Booking::factory()->create();
+    $notification = new BookingConfirmationNotification($booking);
+    $mail = $notification->toMail($booking->customer);
+
+    expect($notification->via($booking->customer))->toBe(['mail', 'database'])
+        ->and($mail->introLines)->toContain('The introduction to the notification.')
+        ->and($mail->actionText)->toBe('Notification Action')
+        ->and($notification->toArray($booking->customer))->toMatchArray([
+            'booking_id' => $booking->id,
+            'message' => 'Your booking has been confirmed.',
+            'action_url' => url('/bookings/'.$booking->id),
+        ]);
+});
+
 test('booking reminder notification has a bounded retry policy', function () {
     $notification = new BookingReminderNotification(Booking::factory()->make());
 
     expect($notification->tries)->toBe(3)
         ->and($notification->backoff)->toBe([60, 300, 900]);
+});
+
+test('booking reminder notification defines channels and mail content', function () {
+    $booking = Booking::factory()->create();
+    $notification = new BookingReminderNotification($booking);
+    $mail = $notification->toMail($booking->customer);
+
+    expect($notification->via($booking->customer))->toBe(['mail'])
+        ->and($mail->subject)->toBe('Booking Reminder')
+        ->and($mail->greeting)->toBe('Hello '.$booking->customer->name)
+        ->and($mail->introLines)->toContain('This is a reminder for your upcoming booking.')
+        ->and($mail->actionText)->toBe('View Booking');
 });
 
 test('booking confirmation notification logs structured context when it fails permanently', function () {
@@ -127,4 +154,26 @@ test('failed job listener logs critical context and sends the configured alert',
         fn (FailedQueueJobNotification $notification, array $channels, object $notifiable): bool => in_array('mail', $channels, true)
             && $notifiable->routeNotificationFor('mail') === 'ops@example.com'
     );
+});
+
+test('failed queue job notification renders scalar values and hides complex context', function () {
+    $notification = new FailedQueueJobNotification([
+        'name' => 'ExampleJob',
+        'connection' => 'database',
+        'queue' => 'default',
+        'job_id' => 123,
+        'uuid' => 'uuid-1',
+        'attempts' => 3,
+        'exception' => RuntimeException::class,
+        'message' => ['not scalar'],
+    ]);
+
+    $mail = $notification->toMail(new stdClass);
+
+    expect($notification->via(new stdClass))->toBe(['mail'])
+        ->and($mail->subject)->toBe('Queue job failed permanently')
+        ->and($mail->introLines)->toContain('Job: ExampleJob')
+        ->and($mail->introLines)->toContain('Queue: database/default')
+        ->and($mail->introLines)->toContain('Job ID: 123')
+        ->and($mail->introLines)->toContain('Message: n/a');
 });

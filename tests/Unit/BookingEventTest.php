@@ -2,10 +2,17 @@
 
 namespace Tests\Unit;
 
+use App\Events\BookingConfirmed;
 use App\Jobs\SendBookingConfirmation;
+use App\Listeners\BookingConfirmationNotificationListener;
+use App\Listeners\LogConfirmedBooking;
 use App\Models\Booking;
 use App\Models\Customer;
+use App\Notifications\BookingConfirmationNotification;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -56,5 +63,50 @@ class BookingEventTest extends TestCase
         Queue::assertPushed(SendBookingConfirmation::class, function (SendBookingConfirmation $job) {
             return $job->afterCommit === true;
         });
+    }
+
+    public function test_booking_confirmed_event_keeps_booking_and_broadcasts_on_private_channel(): void
+    {
+        $booking = Booking::factory()->create();
+        $event = new BookingConfirmed($booking);
+
+        $this->assertTrue($event->booking->is($booking));
+        $this->assertCount(1, $event->broadcastOn());
+        $this->assertInstanceOf(PrivateChannel::class, $event->broadcastOn()[0]);
+    }
+
+    public function test_send_booking_confirmation_job_notifies_customer(): void
+    {
+        Notification::fake();
+        $booking = Booking::factory()->create();
+
+        (new SendBookingConfirmation($booking))->handle();
+
+        Notification::assertSentTo(
+            $booking->customer,
+            BookingConfirmationNotification::class,
+            fn (BookingConfirmationNotification $notification): bool => $notification->booking->is($booking)
+        );
+    }
+
+    public function test_booking_confirmation_listener_notifies_customer(): void
+    {
+        Notification::fake();
+        $booking = Booking::factory()->create();
+
+        app(BookingConfirmationNotificationListener::class)->handle(new BookingConfirmed($booking));
+
+        Notification::assertSentTo($booking->customer, BookingConfirmationNotification::class);
+    }
+
+    public function test_log_confirmed_booking_listener_writes_booking_id(): void
+    {
+        $booking = Booking::factory()->create();
+
+        Log::shouldReceive('debug')
+            ->once()
+            ->with('Booking confirmed: '.$booking->id, []);
+
+        app(LogConfirmedBooking::class)->handle(new BookingConfirmed($booking));
     }
 }
