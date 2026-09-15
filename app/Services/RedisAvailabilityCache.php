@@ -11,6 +11,7 @@ use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Cache\LockProvider;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Psr\Log\LoggerInterface;
+use RuntimeException;
 use Throwable;
 
 final class RedisAvailabilityCache implements AvailabilityCacheInterface
@@ -20,24 +21,19 @@ final class RedisAvailabilityCache implements AvailabilityCacheInterface
     public function remember(Resource $resource, AvailabilityCriteria $criteria, Closure $resolveSlots): array
     {
         $startedAt = microtime(true);
-        $loaderException = null;
-        $load = function () use ($resolveSlots, &$loaderException): array {
+        $load = function () use ($resolveSlots): array {
             try {
                 return $resolveSlots();
             } catch (Throwable $exception) {
-                $loaderException = $exception;
-
-                throw $exception;
+                throw new AvailabilityResolverFailed($exception);
             }
         };
 
         try {
             return $this->rememberSafely($resource, $criteria, $load, $startedAt);
+        } catch (AvailabilityResolverFailed $exception) {
+            throw $exception->reason();
         } catch (Throwable $exception) {
-            if ($loaderException === $exception) {
-                throw $exception;
-            }
-
             return $this->recover($exception, $resource, $resolveSlots, $startedAt);
         }
     }
@@ -123,5 +119,18 @@ final class RedisAvailabilityCache implements AvailabilityCacheInterface
     {
         $this->logger->warning('availability_cache.'.$reason,
             ['resource_id' => $resourceId, 'exception' => $exception::class]);
+    }
+}
+
+final class AvailabilityResolverFailed extends RuntimeException
+{
+    public function __construct(private readonly Throwable $reason)
+    {
+        parent::__construct($reason->getMessage(), 0, $reason);
+    }
+
+    public function reason(): Throwable
+    {
+        return $this->reason;
     }
 }
