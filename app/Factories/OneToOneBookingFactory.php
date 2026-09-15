@@ -3,6 +3,7 @@
 namespace App\Factories;
 
 use App\Models\Booking;
+use Illuminate\Support\Arr;
 
 class OneToOneBookingFactory implements BookingFactoryInterface
 {
@@ -34,11 +35,11 @@ class OneToOneBookingFactory implements BookingFactoryInterface
      */
     private function checkSlotAndCustomerCount($customerId, $slotId): void
     {
-        if (count($customerId) > 1) {
+        if (count(Arr::wrap($customerId)) > 1) {
             throw new \Exception('More one Customer in this type is not available');
         }
 
-        if (count($slotId) > 1) {
+        if (count(Arr::wrap($slotId)) > 1) {
             throw new \Exception('More one Slot in this type is not available');
         }
     }

@@ -1,0 +1,139 @@
+name: workflow.yml
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+
+# Cancel older runs for the same branch or PR when a newer commit is pushed.
+# This keeps only the latest run active.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  style:
+    runs-on: ubuntu-latest
+    steps:
+     - uses: actions/checkout@v4
+
+     - name: setup php
+       uses: shivammathur/setup-php@v2
+       with:
+         php-version: 8.4
+         tools: composer:v2
+
+     - name: Cache Composer dependencies
+       uses: actions/cache@v4
+       with:
+         path: ~/.composer/cache/files
+         key: composer-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+         restore-keys: composer-${{ runner.os }}-
+
+     - name: Install dependencies
+       run: composer install --no-interaction --prefer-dist
+
+     - name: Run Pint
+       run: ./vendor/bin/pint --test
+
+
+  larastan:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v4
+
+        - name: setup php
+          uses: shivammathur/setup-php@v2
+          with:
+            php-version: 8.4
+            tools: composer:v2
+
+        - name: Cache Composer dependencies
+          uses: actions/cache@v4
+          with:
+            path: ~/.composer/cache/files
+            key: composer-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+            restore-keys: composer-${{ runner.os }}-
+
+        - name: Install dependencies
+          run: composer install --no-interaction --prefer-dist
+
+        - name: Run Larastan
+          run: vendor/bin/phpstan analyse
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: testing
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: testing
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: 6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup php
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.4
+          extensions: pdo_mysql, redis
+          coverage: xdebug
+          tools: composer:v2
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache/files
+          key: composer-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Prepare Laravel environment
+        run: cp .env.example .env && php artisan key:generate
+
+      - name: Run migrations
+        run: php artisan migrate --force --seed
+
+      - name: Run test
+        env:
+          XDEBUG_MODE: coverage
+        run: ./vendor/bin/pest --coverage --min=80 --coverage-clover=coverage.xml --coverage-html=coverage-report
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            coverage.xml
+            coverage-report
