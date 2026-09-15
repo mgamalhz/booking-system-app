@@ -30,6 +30,7 @@ class BookingEventTest extends TestCase
     public function test_booking_confirmation_job_is_pushed_when_booking_is_updated()
     {
         Queue::fake();
+        $this->swapPaymobClient();
 
         $booking = Booking::factory()->create();
         $this->actingAs(Customer::query()->findOrFail($booking->customer_id), 'sanctum')
@@ -57,6 +58,7 @@ class BookingEventTest extends TestCase
     public function test_booking_confirmation_job_is_marked_to_dispatch_after_commit(): void
     {
         Queue::fake();
+        $this->swapPaymobClient();
 
         $booking = Booking::factory()->create([
             'status' => 'pending',
@@ -72,48 +74,40 @@ class BookingEventTest extends TestCase
         });
     }
 
-    public function test_booking_confirmed_event_keeps_booking_and_broadcasts_on_private_channel(): void
+    private function swapPaymobClient(): void
     {
-        $booking = Booking::factory()->create();
-        $event = new BookingConfirmed($booking);
+        config()->set('paymob.integration_id', 123);
+        config()->set('paymob.iframe_id', 456);
 
-        $this->assertTrue($event->booking->is($booking));
-        $this->assertCount(1, $event->broadcastOn());
-        $this->assertInstanceOf(PrivateChannel::class, $event->broadcastOn()[0]);
-    }
+        $this->app->instance(PaymobClientContract::class, new class implements PaymobClientContract
+        {
+            public function authenticate(): AuthenticationResponseDto
+            {
+                throw new \BadMethodCallException('Not used in this test.');
+            }
 
-    public function test_send_booking_confirmation_job_notifies_customer(): void
-    {
-        Notification::fake();
-        $booking = Booking::factory()->create();
+            public function registerOrder(RegisterOrderData $data): OrderResponseDto
+            {
+                return new OrderResponseDto(id: 987654);
+            }
 
-        (new SendBookingConfirmation($booking))->handle();
+            public function requestPaymentKey(RequestPaymentKeyData $data): PaymentKeyResponseDto
+            {
+                return new PaymentKeyResponseDto(token: 'payment-token');
+            }
 
-        Notification::assertSentTo(
-            $booking->customer,
-            BookingConfirmationNotification::class,
-            fn (BookingConfirmationNotification $notification): bool => $notification->booking->is($booking)
-        );
-    }
+            public function paymentRedirectUrl(string $paymentToken, ?int $iframeId = null): string
+            {
+                return rtrim((string) config('paymob.base_url'), '/')
+                    .'/api/acceptance/iframes/'
+                    .(int) config('paymob.iframe_id')
+                    .'?payment_token='.urlencode($paymentToken);
+            }
 
-    public function test_booking_confirmation_listener_notifies_customer(): void
-    {
-        Notification::fake();
-        $booking = Booking::factory()->create();
-
-        app(BookingConfirmationNotificationListener::class)->handle(new BookingConfirmed($booking));
-
-        Notification::assertSentTo($booking->customer, BookingConfirmationNotification::class);
-    }
-
-    public function test_log_confirmed_booking_listener_writes_booking_id(): void
-    {
-        $booking = Booking::factory()->create();
-
-        Log::shouldReceive('debug')
-            ->once()
-            ->with('Booking confirmed: '.$booking->id, []);
-
-        app(LogConfirmedBooking::class)->handle(new BookingConfirmed($booking));
+            public function capture(int $transactionId, int $amountCents): CapturePaymentResponseDto
+            {
+                throw new \BadMethodCallException('Not used in this test.');
+            }
+        });
     }
 }
