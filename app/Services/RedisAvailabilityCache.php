@@ -11,6 +11,7 @@ use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Cache\LockProvider;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Psr\Log\LoggerInterface;
+use RuntimeException;
 use Throwable;
 
 final class RedisAvailabilityCache implements AvailabilityCacheInterface
@@ -28,28 +29,11 @@ final class RedisAvailabilityCache implements AvailabilityCacheInterface
             }
         };
 
-        $loaderException = null;
-        $load = function () use ($resolveSlots, &$loaderException): array {
-            try {
-                return $resolveSlots();
-            } catch (Throwable $exception) {
-                $loaderException = $exception;
-
-                throw $exception;
-            }
-        };
-
         try {
             return $this->rememberSafely($resource, $criteria, $load, $startedAt);
         } catch (AvailabilityResolverFailed $exception) {
             throw $exception->reason();
-            return $this->rememberSafely($resource, $criteria, $load, $startedAt);
         } catch (Throwable $exception) {
-            return $this->recover($exception, $resource, $resolveSlots, $startedAt);
-            if ($loaderException === $exception) {
-                throw $exception;
-            }
-
             return $this->recover($exception, $resource, $resolveSlots, $startedAt);
         }
     }
