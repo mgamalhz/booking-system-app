@@ -54,7 +54,7 @@ test('availability misses then returns the cached slots on a hit', function () {
 
     expect($availability->forResource($resource, '2030-01-01', '2030-01-02', 'UTC'))->toHaveCount(1);
 
-    expect($queries)->toBe(1);
+    expect($queries)->toBe(0);
     Log::shouldHaveReceived('info')->withArgs(fn ($message, $context) => $message === 'availability_cache.access' && $context['result'] === 'hit');
 });
 

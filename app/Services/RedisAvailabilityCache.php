@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Data\AvailabilityCriteria;
 use App\Models\Resource;
 use App\Services\Contracts\AvailabilityCacheInterface;
+use Closure;
 use Illuminate\Cache\TaggedCache;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Cache\LockProvider;
@@ -16,49 +17,66 @@ final class RedisAvailabilityCache implements AvailabilityCacheInterface
 {
     public function __construct(private readonly CacheFactory $cache, private readonly LoggerInterface $logger) {}
 
-    public function remember(Resource $resource, AvailabilityCriteria $criteria, array $slots): array
+    public function remember(Resource $resource, AvailabilityCriteria $criteria, Closure $resolveSlots): array
     {
         $startedAt = microtime(true);
+        $loaderException = null;
+        $load = function () use ($resolveSlots, &$loaderException): array {
+            try {
+                return $resolveSlots();
+            } catch (Throwable $exception) {
+                $loaderException = $exception;
+
+                throw $exception;
+            }
+        };
+
         try {
-            return $this->rememberSafely($resource, $criteria, $slots, $startedAt);
+            return $this->rememberSafely($resource, $criteria, $load, $startedAt);
         } catch (Throwable $exception) {
-            return $this->recover($exception, $resource, $slots, $startedAt);
+            if ($loaderException === $exception) {
+                throw $exception;
+            }
+
+            return $this->recover($exception, $resource, $resolveSlots, $startedAt);
         }
     }
 
-    private function rememberSafely(Resource $resource, AvailabilityCriteria $criteria, array $slots, float $startedAt): array
+    private function rememberSafely(Resource $resource, AvailabilityCriteria $criteria, Closure $resolveSlots, float $startedAt): array
     {
         $cache = $this->cache->store();
         $key = $this->key($resource, $criteria, (int) $cache->get(AvailabilityCacheKey::scheduleVersionKey(), 1));
         $tagged = $cache->tags([AvailabilityCacheKey::resourceTag($resource->id)]);
 
-        return $this->cachedOrLocked($cache->getStore(), $tagged, $key, $resource->id, $slots, $startedAt);
+        return $this->cachedOrLocked($cache->getStore(), $tagged, $key, $resource->id, $resolveSlots, $startedAt);
     }
 
-    private function cachedOrLocked(object $store, TaggedCache $cache, string $key, int $resourceId, array $slots, float $startedAt): array
+    private function cachedOrLocked(object $store, TaggedCache $cache, string $key, int $resourceId, Closure $resolveSlots, float $startedAt): array
     {
         $cached = $this->cached($cache, $key);
 
         return $cached === null
-            ? $this->rememberLocked($store, $cache, $key, $resourceId, $slots, $startedAt)
+            ? $this->rememberLocked($store, $cache, $key, $resourceId, $resolveSlots, $startedAt)
             : $this->hit($cached, 'hit', $resourceId, $startedAt);
     }
 
-    private function rememberLocked(object $store, TaggedCache $cache, string $key, int $resourceId, array $slots, float $startedAt): array
+    private function rememberLocked(object $store, TaggedCache $cache, string $key, int $resourceId, Closure $resolveSlots, float $startedAt): array
     {
         throw_unless($store instanceof LockProvider, \LogicException::class, 'The default cache store must support locks.');
 
         return $store->lock($key.':fill', (int) config('booking.availability_cache.lock_seconds', 10))
             ->block((int) config('booking.availability_cache.lock_wait_seconds', 2),
-                fn (): array => $this->fill($cache, $key, $resourceId, $slots, $startedAt));
+                fn (): array => $this->fill($cache, $key, $resourceId, $resolveSlots, $startedAt));
     }
 
-    private function fill(TaggedCache $cache, string $key, int $resourceId, array $slots, float $startedAt): array
+    private function fill(TaggedCache $cache, string $key, int $resourceId, Closure $resolveSlots, float $startedAt): array
     {
         $cached = $this->cached($cache, $key);
         if ($cached !== null) {
             return $this->hit($cached, 'hit_after_wait', $resourceId, $startedAt);
         }
+
+        $slots = $resolveSlots();
         $this->write($cache, $key, $slots, $resourceId);
 
         return $this->hit($slots, 'miss', $resourceId, $startedAt);
@@ -70,10 +88,12 @@ final class RedisAvailabilityCache implements AvailabilityCacheInterface
             fn (Throwable $exception) => $this->logFailure('write_failed', $exception, $resourceId), false);
     }
 
-    private function recover(Throwable $exception, Resource $resource, array $slots, float $startedAt): array
+    private function recover(Throwable $exception, Resource $resource, Closure $resolveSlots, float $startedAt): array
     {
         $result = $exception instanceof LockTimeoutException ? 'stampede_fallback' : 'bypassed';
         $this->logFailure($result, $exception, $resource->id);
+
+        $slots = $resolveSlots();
 
         return $this->hit($slots, $result, $resource->id, $startedAt);
     }
