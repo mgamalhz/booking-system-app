@@ -2,17 +2,10 @@
 
 namespace Tests\Unit;
 
-use App\Events\BookingConfirmed;
 use App\Jobs\SendBookingConfirmation;
-use App\Listeners\BookingConfirmationNotificationListener;
-use App\Listeners\LogConfirmedBooking;
 use App\Models\Booking;
 use App\Models\Customer;
-use App\Notifications\BookingConfirmationNotification;
-use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Paymob\Laravel\Contracts\PaymobClientContract;
 use Paymob\Laravel\DTO\AuthenticationResponseDto;

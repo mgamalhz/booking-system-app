@@ -1,12 +1,19 @@
 name: CI
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
     branches:
       - main
 
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   style:
@@ -20,9 +27,18 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.4"
+          extensions: pcntl, posix
+          tools: composer:v2
 
-      - name: Configure Composer authentication
-        run: composer config --global github-oauth.github.com "${{ secrets.GITHUBTOKEN }}"
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache/files
+          key: composer-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: Configure Composer GitHub authentication
+        run: composer config --global github-oauth.github.com "${{ secrets.GITHUBTOKEN || github.token }}"
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
@@ -41,9 +57,18 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.4"
+          extensions: pcntl, posix
+          tools: composer:v2
 
-      - name: Configure Composer authentication
-        run: composer config --global github-oauth.github.com "${{ secrets.GITHUBTOKEN }}"
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache/files
+          key: composer-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: Configure Composer GitHub authentication
+        run: composer config --global github-oauth.github.com "${{ secrets.GITHUBTOKEN || github.token }}"
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
@@ -67,10 +92,18 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.4"
-          extensions: pdo_sqlite
+          extensions: pdo_sqlite, pcntl, posix
+          tools: composer:v2
 
-      - name: Configure Composer authentication
-        run: composer config --global github-oauth.github.com "${{ secrets.GITHUBTOKEN }}"
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache/files
+          key: composer-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: Configure Composer GitHub authentication
+        run: composer config --global github-oauth.github.com "${{ secrets.GITHUBTOKEN || github.token }}"
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-progress

@@ -27,6 +27,8 @@ class BookingService
     }
 
     /**
+     * @param  array<string, mixed>  $data
+     *
      * @throws LockTimeoutException
      */
     public function createBookingForCustomer(array $data, int $customerId): Booking
@@ -38,10 +40,9 @@ class BookingService
         return Cache::lock("slot:{$data['slot_id']}:book", $ttl)
             ->block($waitSeconds, function () use ($data) {
                 $booking = $this->createBooking($data);
-                SendBookingConfirmation::dispatchIf(
-                    $booking->status === 'confirmed',
-                    $booking,
-                )->afterCommit();
+                if ($booking->status === 'confirmed') {
+                    SendBookingConfirmation::dispatch($booking)->afterCommit();
+                }
 
                 return $booking;
             });
@@ -60,7 +61,7 @@ class BookingService
      */
     public function updateExistingBooking(Booking $booking, array $data): Booking
     {
-        $updated = $this->bookingRepository->update($data, $booking->id);
+        $updated = $booking->fill($data)->save();
 
         if (! $updated) {
             throw ValidationException::withMessages([
@@ -68,12 +69,11 @@ class BookingService
             ]);
         }
 
-        $updatedBooking = $booking->refresh()->loadMissing(['slot', 'resource', 'customer']);
+        $updatedBooking = $booking->loadMissing(['slot', 'resource', 'customer']);
 
-        SendBookingConfirmation::dispatchIf(
-            $updatedBooking->status === 'confirmed',
-            $updatedBooking,
-        )->afterCommit();
+        if ($updatedBooking->status === 'confirmed') {
+            SendBookingConfirmation::dispatch($updatedBooking)->afterCommit();
+        }
 
         return $updatedBooking;
     }
