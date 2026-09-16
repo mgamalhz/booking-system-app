@@ -205,70 +205,70 @@ test('authenticated booking confirmation queues work and captures payment from a
     DB::commit();
 
     try {
-    config()->set('queue.default', 'sync');
+        config()->set('queue.default', 'sync');
 
-    [$customer, $resource, $slot] = paymobBookingActors();
+        [$customer, $resource, $slot] = paymobBookingActors();
 
-    $createResponse = $this->actingAs($customer, 'sanctum')
-        ->postJson(route('bookings.store'), paymobBookingPayload($customer, $resource, $slot))
-        ->assertCreated()
-        ->assertJsonPath('booking.status', 'pending');
+        $createResponse = $this->actingAs($customer, 'sanctum')
+            ->postJson(route('bookings.store'), paymobBookingPayload($customer, $resource, $slot))
+            ->assertCreated()
+            ->assertJsonPath('booking.status', 'pending');
 
-    $booking = Booking::query()->findOrFail($createResponse->json('booking.id'));
+        $booking = Booking::query()->findOrFail($createResponse->json('booking.id'));
 
-    $this->assertDatabaseHas('bookings', [
-        'id' => $booking->id,
-        'customer_id' => $customer->id,
-        'resource_id' => $resource->id,
-        'slot_id' => $slot->id,
-        'status' => 'pending',
-    ]);
+        $this->assertDatabaseHas('bookings', [
+            'id' => $booking->id,
+            'customer_id' => $customer->id,
+            'resource_id' => $resource->id,
+            'slot_id' => $slot->id,
+            'status' => 'pending',
+        ]);
 
-    confirmBookingThroughHttp($customer, $booking)
-        ->assertOk()
-        ->assertJsonPath('booking.status', 'confirmed')
-        ->assertJsonPath('payment.amount_cents', 25000)
-        ->assertJsonPath('payment.paymob_order_id', 111222333)
-        ->assertJsonPath('payment.payment_key', 'payment-token')
-        ->assertJsonPath('payment.redirect_url', paymobBaseUrl().'/api/acceptance/iframes/456789?payment_token=payment-token');
+        confirmBookingThroughHttp($customer, $booking)
+            ->assertOk()
+            ->assertJsonPath('booking.status', 'confirmed')
+            ->assertJsonPath('payment.amount_cents', 25000)
+            ->assertJsonPath('payment.paymob_order_id', 111222333)
+            ->assertJsonPath('payment.payment_key', 'payment-token')
+            ->assertJsonPath('payment.redirect_url', paymobBaseUrl().'/api/acceptance/iframes/456789?payment_token=payment-token');
 
-    $booking->refresh();
+        $booking->refresh();
 
-    $this->assertDatabaseHas('bookings', ['id' => $booking->id, 'status' => 'confirmed']);
-    expect($customer->notifications()->count())->toBe(1);
+        $this->assertDatabaseHas('bookings', ['id' => $booking->id, 'status' => 'confirmed']);
+        expect($customer->notifications()->count())->toBe(1);
 
-    assertPaymobStartRequestsWereSent($booking);
+        assertPaymobStartRequestsWereSent($booking);
 
-    $this->assertDatabaseHas('payments', [
-        'paymob_reference' => '111222333',
-        'order_type' => Booking::class,
-        'order_id' => (string) $booking->id,
-        'amount_cents' => 25000,
-        'status' => 'processing',
-    ]);
+        $this->assertDatabaseHas('payments', [
+            'paymob_reference' => '111222333',
+            'order_type' => Booking::class,
+            'order_id' => (string) $booking->id,
+            'amount_cents' => 25000,
+            'status' => 'processing',
+        ]);
 
-    $this->postJson('/paymob/webhook', signedPaymobWebhookPayload())
-        ->assertOk()
-        ->assertJson(['message' => 'Webhook received.']);
+        $this->postJson('/paymob/webhook', signedPaymobWebhookPayload())
+            ->assertOk()
+            ->assertJson(['message' => 'Webhook received.']);
 
-    $this->assertDatabaseHas('paymob_webhook_events', [
-        'transaction_id' => 987654321,
-    ]);
+        $this->assertDatabaseHas('paymob_webhook_events', [
+            'transaction_id' => 987654321,
+        ]);
 
-    Http::assertSent(fn (Request $request): bool => $request->url() === paymobBaseUrl().'/api/acceptance/capture?token=auth-token'
-        && $request['transaction_id'] === 987654321
-        && $request['amount_cents'] === 25000);
+        Http::assertSent(fn (Request $request): bool => $request->url() === paymobBaseUrl().'/api/acceptance/capture?token=auth-token'
+            && $request['transaction_id'] === 987654321
+            && $request['amount_cents'] === 25000);
 
-    $this->assertDatabaseHas('payments', [
-        'paymob_reference' => '987654321',
-        'transaction_id' => 987654321,
-        'order_type' => Booking::class,
-        'order_id' => (string) $booking->id,
-        'amount_cents' => 25000,
-        'status' => 'captured',
-    ]);
+        $this->assertDatabaseHas('payments', [
+            'paymob_reference' => '987654321',
+            'transaction_id' => 987654321,
+            'order_type' => Booking::class,
+            'order_id' => (string) $booking->id,
+            'amount_cents' => 25000,
+            'status' => 'captured',
+        ]);
 
-    expect(Payment::query()->where('status', 'captured')->count())->toBe(1);
+        expect(Payment::query()->where('status', 'captured')->count())->toBe(1);
     } finally {
         DB::table('payments')->delete();
         DB::table('paymob_webhook_events')->delete();

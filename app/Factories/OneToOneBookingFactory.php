@@ -3,7 +3,6 @@
 namespace App\Factories;
 
 use App\Models\Booking;
-use Illuminate\Support\Arr;
 
 class OneToOneBookingFactory implements BookingFactoryInterface
 {
