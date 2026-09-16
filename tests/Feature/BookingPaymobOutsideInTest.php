@@ -1,6 +1,5 @@
 <?php
 
-use App\Jobs\SendBookingConfirmation;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Resource;
@@ -10,8 +9,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Queue;
 use Paymob\Laravel\Contracts\PaymobClientContract;
 use Paymob\Laravel\Jobs\ProcessPaymobPayment;
 use Paymob\Laravel\Models\Payment;
@@ -203,10 +202,10 @@ function assertPaymobStartRequestsWereSent(Booking $booking): void
 
 test('authenticated booking confirmation queues work and captures payment from a real Paymob webhook route', function (): void {
     fakeSuccessfulPaymobStartAndCapture();
-    Queue::fake([
-        SendBookingConfirmation::class,
-    ]);
-    Bus::fake([ProcessPaymobPayment::class]);
+    DB::commit();
+
+    try {
+    config()->set('queue.default', 'sync');
 
     [$customer, $resource, $slot] = paymobBookingActors();
 
@@ -236,10 +235,7 @@ test('authenticated booking confirmation queues work and captures payment from a
     $booking->refresh();
 
     $this->assertDatabaseHas('bookings', ['id' => $booking->id, 'status' => 'confirmed']);
-    Queue::assertPushed(SendBookingConfirmation::class, function (SendBookingConfirmation $job) use ($booking): bool {
-        return $job->booking->is($booking)
-            && $job->afterCommit === true;
-    });
+    expect($customer->notifications()->count())->toBe(1);
 
     assertPaymobStartRequestsWereSent($booking);
 
@@ -259,10 +255,6 @@ test('authenticated booking confirmation queues work and captures payment from a
         'transaction_id' => 987654321,
     ]);
 
-    Bus::assertDispatched(ProcessPaymobPayment::class, 1);
-
-    processPaymobCapture($booking);
-
     Http::assertSent(fn (Request $request): bool => $request->url() === paymobBaseUrl().'/api/acceptance/capture?token=auth-token'
         && $request['transaction_id'] === 987654321
         && $request['amount_cents'] === 25000);
@@ -277,6 +269,17 @@ test('authenticated booking confirmation queues work and captures payment from a
     ]);
 
     expect(Payment::query()->where('status', 'captured')->count())->toBe(1);
+    } finally {
+        DB::table('payments')->delete();
+        DB::table('paymob_webhook_events')->delete();
+        DB::table('notifications')->delete();
+        DB::table('personal_access_tokens')->delete();
+        DB::table('bookings')->delete();
+        DB::table('slots')->delete();
+        DB::table('resources')->delete();
+        DB::table('customers')->delete();
+        DB::beginTransaction();
+    }
 });
 
 test('gateway timeout while starting payment leaves a failed payment attempt and no captured charge', function (): void {

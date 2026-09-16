@@ -28,7 +28,9 @@ class BookingRepository implements BookingCancellationRepositoryInterface, Booki
      */
     public function update(array $data, int $id): bool
     {
-        return $this->find($id)->update($data);
+        return Booking::query()
+            ->whereKey($id)
+            ->update($data) > 0;
     }
 
     public function delete(int $id): bool
