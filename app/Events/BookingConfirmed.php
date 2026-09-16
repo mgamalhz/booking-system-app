@@ -3,10 +3,10 @@
 namespace App\Events;
 
 use App\Models\Booking;
-use InvalidArgumentException;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
 use Illuminate\Foundation\Events\Dispatchable;
+use InvalidArgumentException;
 
 class BookingConfirmed implements ShouldDispatchAfterCommit
 {

@@ -60,7 +60,9 @@ class BookingEventTest extends TestCase
                 'status' => 'confirmed',
             ]);
 
-        Event::assertDispatched(BookingConfirmed::class);
+        Queue::assertPushed(SendBookingConfirmation::class, function (SendBookingConfirmation $job) {
+            return $job->afterCommit === true;
+        });
     }
 
     public function test_booking_confirmed_event_keeps_booking_and_broadcasts_on_private_channel(): void

@@ -6,6 +6,7 @@ use App\Events\BookingCancelled;
 use App\Events\BookingCompleted;
 use App\Events\BookingConfirmed;
 use App\Exceptions\InvalidBookingStatusTransition;
+use App\Jobs\SendBookingConfirmation;
 use App\Models\Booking;
 use App\Repositories\Interfaces\BookingRepositoryInterface;
 use App\Strategies\BookingStrategies\BookingStrategyResolver;
