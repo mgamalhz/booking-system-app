@@ -27,6 +27,43 @@ class BookingEventTest extends TestCase
 {
     use RefreshDatabase;
 
+    private function swapPaymobClient(): void
+    {
+        config()->set('paymob.integration_id', 123);
+        config()->set('paymob.iframe_id', 456);
+
+        $this->app->instance(PaymobClientContract::class, new class implements PaymobClientContract
+        {
+            public function authenticate(): AuthenticationResponseDto
+            {
+                throw new \BadMethodCallException('Not used in this test.');
+            }
+
+            public function registerOrder(RegisterOrderData $data): OrderResponseDto
+            {
+                return new OrderResponseDto(id: 987654);
+            }
+
+            public function requestPaymentKey(RequestPaymentKeyData $data): PaymentKeyResponseDto
+            {
+                return new PaymentKeyResponseDto(token: 'payment-token');
+            }
+
+            public function paymentRedirectUrl(string $paymentToken, ?int $iframeId = null): string
+            {
+                return rtrim((string) config('paymob.base_url'), '/')
+                    .'/api/acceptance/iframes/'
+                    .(int) config('paymob.iframe_id')
+                    .'?payment_token='.urlencode($paymentToken);
+            }
+
+            public function capture(int $transactionId, int $amountCents): CapturePaymentResponseDto
+            {
+                throw new \BadMethodCallException('Not used in this test.');
+            }
+        });
+    }
+
     public function test_booking_confirmation_job_is_pushed_when_booking_is_updated()
     {
         Queue::fake();
