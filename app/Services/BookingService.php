@@ -36,7 +36,13 @@ class BookingService
 
         return Cache::lock("slot:{$data['slot_id']}:book", $ttl)
             ->block($waitSeconds, function () use ($data) {
-                return $this->createBooking($data);
+                $booking = $this->createBooking($data);
+                SendBookingConfirmation::dispatchIf(
+                    $booking->status === 'confirmed',
+                    $booking,
+                )->afterCommit();
+
+                return $booking;
             });
     }
 
