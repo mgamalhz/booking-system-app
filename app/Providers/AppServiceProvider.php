@@ -5,11 +5,12 @@ namespace App\Providers;
 use App\Events\BookingCancelled;
 use App\Events\BookingCompleted;
 use App\Events\BookingConfirmed;
-use App\Listeners\BookingConfirmationNotificationListener;
 use App\Listeners\InvalidateBookingAvailabilityCache;
 use App\Listeners\LogConfirmedBooking;
 use App\Listeners\RecordBookingStatusEvent;
 use App\Listeners\SendFailedJobAlert;
+use App\Jobs\SendBookingConfirmation;
+use App\Models\Booking;
 use App\Repositories\BookingDocumentRepository;
 use App\Repositories\BookingRepository;
 use App\Repositories\CustomerRepository;
@@ -58,7 +59,12 @@ class AppServiceProvider extends ServiceProvider
             Event::listen($event, [LogConfirmedBooking::class, 'handle']);
         }
 
-        Event::listen(BookingConfirmed::class, [BookingConfirmationNotificationListener::class, 'handle']);
+        Event::listen(BookingConfirmed::class, function (BookingConfirmed $event): void {
+            $booking = $event->booking ?? Booking::query()->findOrFail($event->bookingId);
+
+            SendBookingConfirmation::dispatch($booking)->afterCommit();
+        });
+
         Event::listen(JobFailed::class, [SendFailedJobAlert::class, 'handle']);
 
     }
