@@ -2,6 +2,7 @@
 
 namespace App\Strategies\BookingStrategies;
 
+use App\Exceptions\ApiConflictException;
 use App\Models\Booking;
 
 class OneToOneBookingStrategy implements BookingStrategyInterface
@@ -21,7 +22,7 @@ class OneToOneBookingStrategy implements BookingStrategyInterface
         ], $data);
 
         if (! $this->isSlotAvailability($data['slot_id'])) {
-            throw new \Exception('Slot is not available');
+            throw new ApiConflictException('Slot is not available', 'The selected slot is no longer available.');
         }
 
         return Booking::create($data);
