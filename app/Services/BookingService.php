@@ -10,7 +10,6 @@ use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Validation\ValidationException;
 
 class BookingService
 {

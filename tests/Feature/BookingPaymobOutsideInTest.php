@@ -1,6 +1,5 @@
 <?php
 
-use App\Jobs\SendBookingConfirmation;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Resource;
@@ -361,7 +360,7 @@ test('duplicate Paymob webhook delivery records one event and captures one charg
     expect(PaymobWebhookEvent::query()->where('transaction_id', 987654321)->count())->toBe(1)
         ->and(Payment::query()->where('status', 'captured')->count())->toBe(0);
 
-    Bus::assertDispatched(ProcessPaymobPayment::class, 1);
+    Queue::assertPushed(ProcessPaymobPayment::class, 1);
 
     processPaymobCapture($booking);
 

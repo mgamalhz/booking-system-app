@@ -29,10 +29,11 @@ class BookingDocumentTemporaryUrlController extends Controller
 
         $expiresInMinutes = (int) config('filesystems.disks.documents.temporary_url_expiration_minutes', 5);
 
-        $url = Storage::disk('documents')->temporaryUrl(
-            $bookingDocument->key,
-            now()->addMinutes($expiresInMinutes)
-        );
+        $url = Storage::disk('documents')
+            ->temporaryUrl(
+                $bookingDocument->key,
+                now()->addMinutes($expiresInMinutes)
+            );
 
         return $this->successResponse([
             'url' => $url,
