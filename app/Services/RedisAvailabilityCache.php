@@ -20,7 +20,7 @@ final class RedisAvailabilityCache implements AvailabilityCacheInterface
     public function remember(
         int $resourceId,
         AvailabilityCriteria $criteria,
-         Closure $resolveSlots): array
+        Closure $resolveSlots): array
     {
         $startedAt = microtime(true);
         $load = function () use ($resolveSlots): array {
