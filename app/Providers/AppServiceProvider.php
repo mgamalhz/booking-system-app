@@ -7,8 +7,10 @@ use App\Listeners\BookingConfirmationNotificationListener;
 use App\Listeners\LogConfirmedBooking;
 use App\Listeners\SendFailedJobAlert;
 use App\Models\Booking;
+use App\Models\Resource;
 use App\Models\Slot;
 use App\Observers\BookingAvailabilityObserver;
+use App\Observers\ResourceAvailabilityObserver;
 use App\Observers\SlotScheduleObserver;
 use App\Repositories\BookingDocumentRepository;
 use App\Repositories\BookingRepository;
@@ -59,6 +61,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Booking::observe(BookingAvailabilityObserver::class);
+        Resource::observe(ResourceAvailabilityObserver::class);
         Slot::observe(SlotScheduleObserver::class);
         Event::listen(BookingConfirmed::class, [BookingConfirmationNotificationListener::class, 'handle']);
         Event::listen(BookingConfirmed::class, [LogConfirmedBooking::class, 'handle']);

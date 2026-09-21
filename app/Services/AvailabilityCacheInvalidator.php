@@ -11,9 +11,9 @@ class AvailabilityCacheInvalidator
     public function resource(int $resourceId, string $reason): void
     {
         try {
-            Cache::store()
-                ->tags([AvailabilityCacheKey::resourceTag($resourceId)])
-                ->flush();
+            $cache = Cache::store();
+            $key = AvailabilityCacheKey::resourceVersionKey($resourceId);
+            $cache->forever($key, ((int) $cache->get($key, 1)) + 1);
 
             Log::info('availability_cache.invalidated', compact('resourceId', 'reason'));
         } catch (Throwable $exception) {

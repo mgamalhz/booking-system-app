@@ -3,13 +3,12 @@
 namespace App\Services;
 
 use App\Data\AvailabilityCriteria;
-use App\Models\Resource;
 use App\Services\Contracts\AvailabilityCacheInterface;
 use Closure;
-use Illuminate\Cache\TaggedCache;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Cache\LockProvider;
 use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 use Throwable;
@@ -18,7 +17,10 @@ final class RedisAvailabilityCache implements AvailabilityCacheInterface
 {
     public function __construct(private readonly CacheFactory $cache, private readonly LoggerInterface $logger) {}
 
-    public function remember(Resource $resource, AvailabilityCriteria $criteria, Closure $resolveSlots): array
+    public function remember(
+        int $resourceId,
+        AvailabilityCriteria $criteria,
+         Closure $resolveSlots): array
     {
         $startedAt = microtime(true);
         $load = function () use ($resolveSlots): array {
@@ -30,24 +32,28 @@ final class RedisAvailabilityCache implements AvailabilityCacheInterface
         };
 
         try {
-            return $this->rememberSafely($resource, $criteria, $load, $startedAt);
+            return $this->rememberSafely($resourceId, $criteria, $load, $startedAt);
         } catch (AvailabilityResolverFailed $exception) {
             throw $exception->reason();
         } catch (Throwable $exception) {
-            return $this->recover($exception, $resource, $resolveSlots, $startedAt);
+            return $this->recover($exception, $resourceId, $resolveSlots, $startedAt);
         }
     }
 
-    private function rememberSafely(Resource $resource, AvailabilityCriteria $criteria, Closure $resolveSlots, float $startedAt): array
+    private function rememberSafely(int $resourceId, AvailabilityCriteria $criteria, Closure $resolveSlots, float $startedAt): array
     {
         $cache = $this->cache->store();
-        $key = $this->key($resource, $criteria, (int) $cache->get(AvailabilityCacheKey::scheduleVersionKey(), 1));
-        $tagged = $cache->tags([AvailabilityCacheKey::resourceTag($resource->id)]);
+        $key = $this->key(
+            $resourceId,
+            $criteria,
+            (int) $cache->get(AvailabilityCacheKey::scheduleVersionKey(), 1),
+            (int) $cache->get(AvailabilityCacheKey::resourceVersionKey($resourceId), 1),
+        );
 
-        return $this->cachedOrLocked($cache->getStore(), $tagged, $key, $resource->id, $resolveSlots, $startedAt);
+        return $this->cachedOrLocked($cache->getStore(), $cache, $key, $resourceId, $resolveSlots, $startedAt);
     }
 
-    private function cachedOrLocked(object $store, TaggedCache $cache, string $key, int $resourceId, Closure $resolveSlots, float $startedAt): array
+    private function cachedOrLocked(object $store, CacheRepository $cache, string $key, int $resourceId, Closure $resolveSlots, float $startedAt): array
     {
         $cached = $this->cached($cache, $key);
 
@@ -56,7 +62,7 @@ final class RedisAvailabilityCache implements AvailabilityCacheInterface
             : $this->hit($cached, 'hit', $resourceId, $startedAt);
     }
 
-    private function rememberLocked(object $store, TaggedCache $cache, string $key, int $resourceId, Closure $resolveSlots, float $startedAt): array
+    private function rememberLocked(object $store, CacheRepository $cache, string $key, int $resourceId, Closure $resolveSlots, float $startedAt): array
     {
         throw_unless($store instanceof LockProvider, \LogicException::class, 'The default cache store must support locks.');
 
@@ -65,7 +71,7 @@ final class RedisAvailabilityCache implements AvailabilityCacheInterface
                 fn (): array => $this->fill($cache, $key, $resourceId, $resolveSlots, $startedAt));
     }
 
-    private function fill(TaggedCache $cache, string $key, int $resourceId, Closure $resolveSlots, float $startedAt): array
+    private function fill(CacheRepository $cache, string $key, int $resourceId, Closure $resolveSlots, float $startedAt): array
     {
         $cached = $this->cached($cache, $key);
         if ($cached !== null) {
@@ -78,29 +84,29 @@ final class RedisAvailabilityCache implements AvailabilityCacheInterface
         return $this->hit($slots, 'miss', $resourceId, $startedAt);
     }
 
-    private function write(TaggedCache $cache, string $key, array $result, int $resourceId): void
+    private function write(CacheRepository $cache, string $key, array $result, int $resourceId): void
     {
         rescue(fn () => $cache->put($key, $result, (int) config('booking.availability_cache.ttl_seconds', 120)),
             fn (Throwable $exception) => $this->logFailure('write_failed', $exception, $resourceId), false);
     }
 
-    private function recover(Throwable $exception, Resource $resource, Closure $resolveSlots, float $startedAt): array
+    private function recover(Throwable $exception, int $resourceId, Closure $resolveSlots, float $startedAt): array
     {
         $result = $exception instanceof LockTimeoutException ? 'stampede_fallback' : 'bypassed';
-        $this->logFailure($result, $exception, $resource->id);
+        $this->logFailure($result, $exception, $resourceId);
 
         $slots = $resolveSlots();
 
-        return $this->hit($slots, $result, $resource->id, $startedAt);
+        return $this->hit($slots, $result, $resourceId, $startedAt);
     }
 
-    private function key(Resource $resource, AvailabilityCriteria $criteria, int $scheduleVersion): string
+    private function key(int $resourceId, AvailabilityCriteria $criteria, int $scheduleVersion, int $resourceVersion): string
     {
-        return AvailabilityCacheKey::make($resource->id, $criteria->startDate, $criteria->endDate,
-            $criteria->timezone, $criteria->filters, (string) config('booking.availability_cache.version', 'v1'), $scheduleVersion);
+        return AvailabilityCacheKey::make($resourceId, $criteria->startDate, $criteria->endDate,
+            $criteria->timezone, $criteria->filters, (string) config('booking.availability_cache.version', 'v1'), $scheduleVersion, $resourceVersion);
     }
 
-    private function cached(TaggedCache $cache, string $key): ?array
+    private function cached(CacheRepository $cache, string $key): ?array
     {
         $value = $cache->get($key);
 
