@@ -52,7 +52,8 @@ test('it rejects unsupported document file types', function () {
             'attachment' => UploadedFile::fake()->create('payload.txt', 4, 'text/plain'),
         ])
         ->assertUnprocessable()
-        ->assertJsonValidationErrors('attachment');
+        ->assertJsonPath('error.code', 'validation_failed')
+        ->assertJsonStructure(['error' => ['details' => ['fields' => ['attachment']]]]);
 
     expect(BookingDocument::query()->count())->toBe(0);
     Storage::disk('documents')->assertMissing("bookings/{$booking->id}/documents/payload.txt");

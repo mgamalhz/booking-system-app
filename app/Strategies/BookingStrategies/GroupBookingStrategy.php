@@ -2,6 +2,7 @@
 
 namespace App\Strategies\BookingStrategies;
 
+use App\Exceptions\ApiConflictException;
 use App\Models\Booking;
 use App\Models\Slot;
 use Exception;
@@ -42,7 +43,7 @@ class GroupBookingStrategy implements BookingStrategyInterface
             ->count();
 
         if ($currentParticipants >= $data['max_participants']) {
-            throw new Exception('Group booking is full.');
+            throw new ApiConflictException('Group booking is full.');
         }
 
         return $currentParticipants + 1 >= ($data['min_participants'] ?? 1)
