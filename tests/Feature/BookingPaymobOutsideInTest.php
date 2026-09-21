@@ -293,7 +293,7 @@ test('gateway timeout while starting payment leaves a failed payment attempt and
 
     confirmBookingThroughHttp($customer, $booking)
         ->assertUnprocessable()
-        ->assertJsonValidationErrors('paymob');
+        ->assertJsonPath('error.details.fields.paymob.0', 'Paymob returned an error while creating the payment.');
 
     $this->assertDatabaseHas('bookings', ['id' => $booking->id, 'status' => 'confirmed']);
     $this->assertDatabaseHas('payments', [
@@ -381,8 +381,9 @@ test('competing bookings for one slot leave one confirmed booking, one rejection
 
     $this->actingAs($rejectedCustomer, 'sanctum')
         ->postJson(route('bookings.store'), paymobBookingPayload($rejectedCustomer, $resource, $slot))
-        ->assertUnprocessable()
-        ->assertJsonValidationErrors('slot_id');
+        ->assertConflict()
+        ->assertJsonPath('error.code', 'conflict')
+        ->assertJsonPath('error.message', 'The selected slot is no longer available.');
 
     $booking = Booking::query()->findOrFail($accepted->json('booking.id'));
 
