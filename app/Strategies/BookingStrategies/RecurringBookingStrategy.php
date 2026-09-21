@@ -2,6 +2,7 @@
 
 namespace App\Strategies\BookingStrategies;
 
+use App\Exceptions\ApiConflictException;
 use App\Models\Booking;
 use App\Models\Slot;
 use Carbon\Carbon;
@@ -50,7 +51,7 @@ class RecurringBookingStrategy implements BookingStrategyInterface
                     ->exists();
 
                 if ($alreadyBooked) {
-                    throw new \Exception("Slot already booked for date {$date->toDateString()}.");
+                    throw new ApiConflictException("Slot already booked for date {$date->toDateString()}.");
                 }
 
                 $booking = Booking::create([

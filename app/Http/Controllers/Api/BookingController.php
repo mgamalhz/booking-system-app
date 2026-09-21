@@ -2,34 +2,28 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\ApiConflictException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreBookingRequest;
 use App\Http\Requests\UpdateBookingRequest;
 use App\Models\Booking;
 use App\Services\BookingService;
-use Exception;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class BookingController extends Controller
 {
     public function store(StoreBookingRequest $request, BookingService $bookingService): JsonResponse
     {
         try {
-            $booking = $bookingService
-                ->createBookingForCustomer($request->validated(), (int) auth()->id())
-                ->fresh();
-        } catch (LockTimeoutException) {
-            return response()->json([
-                'success' => false,
-                'message' => 'This slot is currently being booked. Please try again shortly.',
-            ], 409);
-        } catch (Exception $exception) {
-            throw ValidationException::withMessages([
-                'slot_id' => [$exception->getMessage()],
-            ]);
+            $booking = DB::transaction(function () use ($request, $bookingService) {
+                $booking = $bookingService->createBookingForCustomer($request->validated(), (int) auth()->id());
+
+                return $booking->fresh();
+            });
+        } catch (LockTimeoutException $exception) {
+            throw new ApiConflictException('This slot is currently being booked. Please try again shortly.');
         }
 
         return response()->json([

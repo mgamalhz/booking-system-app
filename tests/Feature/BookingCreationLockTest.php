@@ -42,10 +42,8 @@ test('it returns conflict when another booking attempt already holds the slot lo
                 'Idempotency-Key' => 'locked-slot',
             ])
             ->assertConflict()
-            ->assertJson([
-                'success' => false,
-                'message' => 'This slot is currently being booked. Please try again shortly.',
-            ]);
+            ->assertJsonPath('error.code', 'conflict')
+            ->assertJsonPath('error.message', 'This slot is currently being booked. Please try again shortly.');
 
         expect(Booking::query()->where('slot_id', $slot->id)->doesntExist())->toBeTrue();
     } finally {
