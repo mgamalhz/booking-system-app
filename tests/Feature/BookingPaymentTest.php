@@ -227,7 +227,7 @@ test('it records a failed payment and returns a clean error when paymob cannot s
     $this->actingAs($customer, 'sanctum')
         ->postJson(route('bookings.update', $booking), ['status' => 'confirmed'])
         ->assertStatus(422)
-        ->assertJsonValidationErrors('paymob');
+        ->assertJsonPath('error.details.fields.paymob.0', 'Payment could not be started.');
 
     $this->assertDatabaseHas('bookings', [
         'id' => $booking->id,
