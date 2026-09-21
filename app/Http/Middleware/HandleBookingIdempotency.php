@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Exceptions\ApiConflictException;
 use App\Models\IdempotencyKey;
 use Closure;
 use Illuminate\Contracts\Cache\LockTimeoutException;
@@ -63,10 +64,7 @@ class HandleBookingIdempotency
                 return $response;
             });
         } catch (LockTimeoutException) {
-            return response()->json([
-                'success' => false,
-                'message' => 'This slot is currently being booked. Please try again shortly.',
-            ], 409);
+            throw new ApiConflictException('This slot is currently being booked. Please try again shortly.');
         } catch (HttpResponseException $exception) {
             return $exception->getResponse();
         }

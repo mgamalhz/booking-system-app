@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\ApiConflictException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreBookingRequest;
 use App\Http\Requests\UpdateBookingRequest;
@@ -24,10 +25,7 @@ class BookingController extends Controller
                 return $booking->fresh();
             });
         } catch (LockTimeoutException) {
-            return response()->json([
-                'success' => false,
-                'message' => 'This slot is currently being booked. Please try again shortly.',
-            ], 409);
+            throw new ApiConflictException('This slot is currently being booked. Please try again shortly.');
         } catch (Exception $exception) {
             throw ValidationException::withMessages([
                 'slot_id' => [$exception->getMessage()],

@@ -104,7 +104,7 @@ test('two different idempotency keys for the same slot still create exactly one 
             'Idempotency-Key' => 'second-key',
         ])
         ->assertUnprocessable()
-        ->assertJsonValidationErrors('slot_id');
+        ->assertJsonPath('error.details.fields.slot_id.0', 'Slot is not available');
 
     expect(Booking::query()->where('slot_id', $slot->id)->count())->toBe(1)
         ->and(Booking::query()->count())->toBe(1);

@@ -1,10 +1,8 @@
 <?php
 
 use App\Jobs\SendBookingReminder;
-use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
-
 
 Artisan::command('idempotency-keys:prune', function () {
     $deleted = DB::table('idempotency_keys')
