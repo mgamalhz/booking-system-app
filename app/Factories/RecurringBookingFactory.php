@@ -42,6 +42,7 @@ class RecurringBookingFactory implements BookingFactoryInterface
 
                 $booking = Booking::create([
                     'customer_id' => $data['customer_id'],
+                    'resource_id' => $data['resource_id'],
                     'slot_id' => $slot->id,
                     'type' => 'recurring',
                     'status' => 'confirmed',

@@ -3,13 +3,18 @@
 namespace Tests\Unit;
 
 use App\Models\Booking;
+use App\Models\BookingDocument;
 use App\Models\Customer;
 use App\Models\Resource;
 use App\Models\Slot;
 use App\Repositories\Interfaces\BookingRepositoryInterface;
 use App\Services\BookingService;
+use Carbon\Carbon;
 use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Tests\TestCase;
@@ -184,5 +189,94 @@ class BookingRepositoryAndServiceTest extends TestCase
         $foundBooking = $service->getBookingById($booking->id);
 
         $this->assertTrue($foundBooking->is($booking));
+    }
+
+    public function test_booking_repository_gets_confirmed_bookings_for_reminder_date(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-07-15 09:00:00'));
+
+        $matchingSlot = Slot::factory()->create(['date' => '2026-07-16']);
+        $outsideSlot = Slot::factory()->create(['date' => '2026-07-17']);
+
+        $matchingBooking = Booking::factory()->create(array_merge($this->bookingData, [
+            'slot_id' => $matchingSlot->id,
+            'status' => 'confirmed',
+        ]));
+        Booking::factory()->create(array_merge($this->bookingData, [
+            'slot_id' => $outsideSlot->id,
+            'status' => 'confirmed',
+        ]));
+        Booking::factory()->create(array_merge($this->bookingData, [
+            'slot_id' => $matchingSlot->id,
+            'status' => 'pending',
+        ]));
+
+        $bookings = $this->bookingRepository->getBookingForReminder(1);
+
+        $this->assertCount(1, $bookings);
+        $this->assertTrue($bookings->first()->is($matchingBooking));
+
+        Carbon::setTestNow();
+    }
+
+    public function test_booking_repository_claims_only_unsent_reminders_and_marks_statuses(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-07-15 09:00:00'));
+
+        $slot = Slot::factory()->create(['date' => '2026-07-16']);
+        $claimable = Booking::factory()->create(array_merge($this->bookingData, [
+            'slot_id' => $slot->id,
+            'status' => 'confirmed',
+            'reminder_sent_at' => null,
+        ]));
+        Booking::factory()->create(array_merge($this->bookingData, [
+            'slot_id' => $slot->id,
+            'status' => 'confirmed',
+            'reminder_sent_at' => Carbon::parse('2026-07-15 08:00:00'),
+        ]));
+
+        $bookings = $this->bookingRepository->claimBookingReminders(1);
+
+        $this->assertCount(1, $bookings);
+        $this->assertTrue($bookings->first()->is($claimable));
+        $this->assertTrue($this->bookingRepository->markReminderAsSent($claimable));
+        $this->assertNotNull($claimable->fresh()->reminder_sent_at);
+        $this->assertTrue($this->bookingRepository->markReminderAsFailed($claimable));
+        $this->assertNull($claimable->fresh()->reminder_sent_at);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_booking_repository_finds_and_cancels_booking_for_cancellation(): void
+    {
+        $booking = Booking::factory()->create(array_merge($this->bookingData, [
+            'status' => 'confirmed',
+        ]));
+
+        $found = $this->bookingRepository->findForCancellation($booking->id);
+        $cancelled = $this->bookingRepository->cancel($found);
+
+        $this->assertTrue($found->relationLoaded('slot'));
+        $this->assertSame('canceled', $cancelled->status);
+    }
+
+    public function test_customer_resource_and_slot_relationships_return_expected_records(): void
+    {
+        $booking = Booking::factory()->create($this->bookingData);
+        $document = BookingDocument::factory()->create([
+            'booking_id' => $booking->id,
+        ]);
+
+        $this->assertTrue($this->customer->bookings()->first()->is($booking));
+        $this->assertTrue($this->customer->bookingDocuments()->first()->is($document));
+        $this->assertTrue($this->resource->bookings()->first()->is($booking));
+        $this->assertTrue($this->slot->bookings()->first()->is($booking));
+
+        $this->assertInstanceOf(HasMany::class, $this->customer->bookings());
+        $this->assertInstanceOf(HasManyThrough::class, $this->customer->bookingDocuments());
+        $this->assertInstanceOf(HasMany::class, $this->resource->bookings());
+        $this->assertInstanceOf(HasMany::class, $this->resource->slots());
+        $this->assertInstanceOf(HasMany::class, $this->slot->bookings());
+        $this->assertInstanceOf(BelongsTo::class, $this->slot->resource());
     }
 }

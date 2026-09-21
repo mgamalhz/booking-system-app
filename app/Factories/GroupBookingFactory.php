@@ -20,6 +20,7 @@ class GroupBookingFactory implements BookingFactoryInterface
 
         $booking = Booking::create([
             'customer_id' => $data['customer_id'],
+            'resource_id' => $data['resource_id'],
             'slot_id' => $data['slot_id'],
             'type' => 'group',
             'status' => $status,
