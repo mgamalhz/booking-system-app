@@ -5,6 +5,7 @@ on:
   pull_request:
 
 
+
 # Cancel older runs for the same branch or PR when a newer commit is pushed.
 # This keeps only the latest run active.
 concurrency:
@@ -20,6 +21,7 @@ jobs:
        uses: shivammathur/setup-php@v2
        with:
          php-version: 8.4
+         extensions: pcntl, posix
          tools: composer:v2
 
      - name: Cache Composer dependencies
@@ -28,6 +30,9 @@ jobs:
          path: ~/.composer/cache/files
          key: composer-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
          restore-keys: composer-${{ runner.os }}-
+
+     - name: Configure Composer GitHub authentication
+       run: composer config --global github-oauth.github.com "${{ secrets.GITHUBTOKEN }}"
 
      - name: Install dependencies
        run: composer install --no-interaction --prefer-dist
@@ -45,6 +50,7 @@ jobs:
           uses: shivammathur/setup-php@v2
           with:
             php-version: 8.4
+            extensions: pcntl, posix
             tools: composer:v2
 
         - name: Cache Composer dependencies
@@ -53,6 +59,9 @@ jobs:
             path: ~/.composer/cache/files
             key: composer-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
             restore-keys: composer-${{ runner.os }}-
+
+        - name: Configure Composer GitHub authentication
+          run: composer config --global github-oauth.github.com "${{ secrets.GITHUBTOKEN }}"
 
         - name: Install dependencies
           run: composer install --no-interaction --prefer-dist
@@ -104,7 +113,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: 8.4
-          extensions: pdo_mysql, redis
+          extensions: pcntl, posix, pdo_mysql, redis
           coverage: xdebug
           tools: composer:v2
 
@@ -114,6 +123,9 @@ jobs:
           path: ~/.composer/cache/files
           key: composer-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
           restore-keys: composer-${{ runner.os }}-
+
+      - name: Configure Composer GitHub authentication
+        run: composer config --global github-oauth.github.com "${{ secrets.GITHUBTOKEN }}"
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist

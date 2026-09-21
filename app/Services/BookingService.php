@@ -15,6 +15,9 @@ class BookingService
 {
     public function __construct(private BookingRepositoryInterface $bookingRepository) {}
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function createBooking(array $data): Booking
     {
         $type = $data['type'] ?? 'one-on-one';
@@ -23,6 +26,8 @@ class BookingService
     }
 
     /**
+     * @param  array<string, mixed>  $data
+     *
      * @throws LockTimeoutException
      */
     public function createBookingForCustomer(array $data, int $customerId): Booking
@@ -43,20 +48,28 @@ class BookingService
             });
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function updateBooking(array $data, int $id): bool
     {
         return $this->bookingRepository->update($data, $id);
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function updateExistingBooking(Booking $booking, array $data): Booking
     {
-        // Route model binding already loaded this row. Updating it directly avoids
-        // re-reading the booking and all three globally eager-loaded relations.
+        $wasConfirmed = $booking->status === 'confirmed';
+
         $booking->update($data);
         $updatedBooking = $booking->refresh()->loadMissing(['slot', 'resource', 'customer']);
 
+        $becameConfirmed = ! $wasConfirmed && $updatedBooking->status === 'confirmed';
+
         SendBookingConfirmation::dispatchIf(
-            $updatedBooking->status === 'confirmed',
+            $becameConfirmed,
             $updatedBooking,
         )->afterCommit();
 
@@ -68,6 +81,9 @@ class BookingService
         return $this->bookingRepository->delete($id);
     }
 
+    /**
+     * @return LengthAwarePaginator<int, Booking>
+     */
     public function getAllBookings(): LengthAwarePaginator
     {
         return $this->bookingRepository->all();
@@ -78,11 +94,17 @@ class BookingService
         return $this->bookingRepository->find($id);
     }
 
+    /**
+     * @return Collection<int, Booking>
+     */
     public function getBookingForReminder(int $daysBeforeReminder): Collection
     {
         return $this->bookingRepository->getBookingForReminder($daysBeforeReminder);
     }
 
+    /**
+     * @return Collection<int, Booking>
+     */
     public function claimBookingReminders(int $daysBeforeReminder): Collection
     {
         return $this->bookingRepository->claimBookingReminders($daysBeforeReminder);

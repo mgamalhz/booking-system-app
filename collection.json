@@ -253,6 +253,53 @@
           "response": []
         },
         {
+          "name": "Get Non-Paid Bookings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/booking/non-paid",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "booking",
+                "non-paid"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Pay Booking",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/booking/{{booking_id}}/pay",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "booking",
+                "{{booking_id}}",
+                "pay"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "Upload Booking Document",
           "event": [
             {
