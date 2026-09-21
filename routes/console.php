@@ -20,7 +20,6 @@ Schedule::command('idempotency-keys:prune')
     ->hourly()
     ->withoutOverlapping()
     ->onOneServer();
-
 Schedule::command('s3:cleanup-documents')
     ->dailyAt('03:00')
     ->withoutOverlapping();
