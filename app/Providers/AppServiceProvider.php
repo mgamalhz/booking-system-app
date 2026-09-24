@@ -6,7 +6,6 @@ use App\Events\BookingCancelled;
 use App\Events\BookingCompleted;
 use App\Events\BookingConfirmed;
 use App\Jobs\SendBookingConfirmation;
-use App\Listeners\InvalidateBookingAvailabilityCache;
 use App\Listeners\LogConfirmedBooking;
 use App\Listeners\RecordBookingStatusEvent;
 use App\Listeners\SendFailedJobAlert;
