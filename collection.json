@@ -49,7 +49,7 @@
         {
           "name": "Test API",
           "request": {
-            "method": "GET",
+            "method": "POST",
             "header": [
               {
                 "key": "Accept",
@@ -99,6 +99,10 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "booking-create-{{$timestamp}}"
               }
             ],
             "body": {
@@ -209,12 +213,14 @@
               "raw": "{\n  \"customer_id\": {{customer_id}},\n  \"resource_id\": {{resource_id}},\n  \"slot_id\": {{slot_id}},\n  \"type\": \"one-on-one\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/booking",
+              "raw": "{{base_url}}/booking/bookings/store",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
-                "booking"
+                "booking",
+                "bookings",
+                "store"
               ]
             }
           },
@@ -239,11 +245,12 @@
               "raw": "{\n  \"status\": \"confirmed\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/booking/{{booking_id}}/update",
+              "raw": "{{base_url}}/booking/booking/{{booking_id}}/update",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
+                "booking",
                 "booking",
                 "{{booking_id}}",
                 "update"
@@ -287,11 +294,12 @@
               ]
             },
             "url": {
-              "raw": "{{base_url}}/booking/{{booking_id}}/documents",
+              "raw": "{{base_url}}/booking/booking/{{booking_id}}/documents",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
+                "booking",
                 "booking",
                 "{{booking_id}}",
                 "documents"
@@ -311,11 +319,12 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/booking-documents/{{booking_document_id}}/temporary-url",
+              "raw": "{{base_url}}/booking/booking-documents/{{booking_document_id}}/temporary-url",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
+                "booking",
                 "booking-documents",
                 "{{booking_document_id}}",
                 "temporary-url"

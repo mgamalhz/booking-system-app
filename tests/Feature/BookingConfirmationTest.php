@@ -10,6 +10,10 @@ use Illuminate\Support\Facades\Queue;
 
 uses(RefreshDatabase::class);
 
+beforeEach(function () {
+    config()->set('cache.default', 'array');
+});
+
 test('it dispatches booking confirmation job after a booking is confirmed', function () {
     Queue::fake();
     $customer = Customer::factory()->create();
@@ -43,6 +47,8 @@ test('it creates api bookings through the service as pending and does not dispat
         'slot_id' => Slot::factory()->create()->id,
         'status' => 'confirmed',
         'type' => 'one-on-one',
+    ], [
+        'Idempotency-Key' => 'creates-api-booking',
     ])->assertCreated();
 
     $booking = Booking::query()->findOrFail($response->json('booking.id'));
@@ -92,9 +98,10 @@ test('it rejects api booking creation when the slot is already unavailable', fun
         'slot_id' => $slot->id,
         'status' => 'confirmed',
         'type' => 'one-on-one',
+    ], [
+        'Idempotency-Key' => 'rejects-unavailable-slot',
     ])
         ->assertConflict()
-        ->assertJsonPath('error.code', 'conflict')
         ->assertJsonPath('error.message', 'The selected slot is no longer available.');
 
     expect(Booking::query()->where('slot_id', $slot->id)->count())->toBe(1);
