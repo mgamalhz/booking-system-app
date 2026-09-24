@@ -15,7 +15,7 @@
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
         "league/flysystem-aws-s3-v3": "3.0",
-        "paymob/laravel": "dev-Paymob-Webhook-Handler-"
+        "paymob/laravel": "0.1.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

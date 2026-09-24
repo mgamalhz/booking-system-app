@@ -101,10 +101,7 @@ class BookingPaymentService
 
             Log::error('Paymob HTTP request failed', [
                 'booking_id' => $booking->id,
-                'customer_id' => $customerId,
-                'amount_cents' => $amountCents,
                 'status' => $response->status(),
-                'body' => $response->body(),
             ]);
 
             $this->payments->saveFailedPayment(
@@ -123,8 +120,6 @@ class BookingPaymentService
         } catch (Throwable $exception) {
             Log::error('Local payment creation failed before Paymob completed', [
                 'booking_id' => $booking->id,
-                'customer_id' => $customerId,
-                'amount_cents' => $amountCents,
                 'exception_class' => $exception::class,
                 'message' => $exception->getMessage(),
             ]);
@@ -168,7 +163,7 @@ class BookingPaymentService
 
     private function amountCents(Booking $booking): int
     {
-        return (int) $booking->resource->price * 100;
+        return (int) round($booking->resource->price * 100);
     }
 
     private function billingData(Booking $booking): BillingDataDto

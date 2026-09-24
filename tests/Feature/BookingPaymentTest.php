@@ -117,6 +117,16 @@ test('it creates a paymob payment key for a booking using the resource price', f
         'amount_cents' => 25000,
         'status' => 'processing',
     ]);
+
+    $payment = Payment::query()->where('paymob_reference', '987654')->firstOrFail();
+
+    expect($payment->response_payload)
+        ->toMatchArray([
+            'paymob_order_id' => 987654,
+            'redirect_url' => rtrim((string) config('paymob.base_url'), '/').'/api/acceptance/iframes/456?payment_token=payment-token',
+        ]);
+
+    $this->assertArrayNotHasKey('payment_key', $payment->response_payload);
 });
 
 test('it starts payment when a booking is confirmed', function () {

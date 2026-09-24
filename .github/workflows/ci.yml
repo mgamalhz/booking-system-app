@@ -22,7 +22,7 @@ jobs:
           php-version: "8.4"
 
       - name: Configure Composer authentication
-        run: composer config --global github-oauth.github.com "${{ secrets.GITHUBTOKEN }}"
+        run: composer config --global github-oauth.github.com "${{ secrets.COMPOSER_GITHUB_TOKEN }}"
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
@@ -43,7 +43,7 @@ jobs:
           php-version: "8.4"
 
       - name: Configure Composer authentication
-        run: composer config --global github-oauth.github.com "${{ secrets.GITHUBTOKEN }}"
+        run: composer config --global github-oauth.github.com "${{ secrets.COMPOSER_GITHUB_TOKEN }}"
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
@@ -55,10 +55,40 @@ jobs:
     name: Tests (Pest)
     runs-on: ubuntu-latest
 
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: testing
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     env:
       APP_ENV: testing
-      DB_CONNECTION: sqlite
-      DB_DATABASE: ":memory:"
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: testing
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: 6379
 
     steps:
       - uses: actions/checkout@v4
@@ -67,10 +97,10 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.4"
-          extensions: pdo_sqlite
+          extensions: pdo_mysql, redis
 
       - name: Configure Composer authentication
-        run: composer config --global github-oauth.github.com "${{ secrets.GITHUBTOKEN }}"
+        run: composer config --global github-oauth.github.com "${{ secrets.COMPOSER_GITHUB_TOKEN }}"
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-progress

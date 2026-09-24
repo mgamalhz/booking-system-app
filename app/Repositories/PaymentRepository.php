@@ -32,7 +32,7 @@ class PaymentRepository implements PaymentRepositoryInterface
                 'order_id' => (string) $booking->id,
                 'amount_cents' => $amountCents,
                 'status' => 'processing',
-                'response_payload' => $payload,
+                'response_payload' => $this->payloadWithoutPaymentKey($payload),
             ],
         );
 
@@ -54,10 +54,21 @@ class PaymentRepository implements PaymentRepositoryInterface
                 'order_id' => (string) $booking->id,
                 'amount_cents' => $amountCents,
                 'status' => 'failed',
-                'response_payload' => $payload,
+                'response_payload' => $this->payloadWithoutPaymentKey($payload),
             ],
         );
 
         return $payment;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function payloadWithoutPaymentKey(array $payload): array
+    {
+        unset($payload['payment_key']);
+
+        return $payload;
     }
 }
