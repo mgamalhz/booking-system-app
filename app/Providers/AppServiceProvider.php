@@ -55,7 +55,6 @@ class AppServiceProvider extends ServiceProvider
     {
         foreach ([BookingConfirmed::class, BookingCancelled::class, BookingCompleted::class] as $event) {
             Event::listen($event, [RecordBookingStatusEvent::class, 'handle']);
-            Event::listen($event, [InvalidateBookingAvailabilityCache::class, 'handle']);
             Event::listen($event, [LogConfirmedBooking::class, 'handle']);
         }
 
