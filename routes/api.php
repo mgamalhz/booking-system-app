@@ -17,7 +17,7 @@ Route::post('login', [AuthController::class, 'login'])->name('auth.login');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::name('bookings.')->group(function () {
-        Route::post('bookings/store', [BookingController::class, 'store'])
+        Route::post('bookings', [BookingController::class, 'store'])
             ->middleware(HandleBookingIdempotency::class)
             ->name('store');
         Route::post('booking/{booking}/update', [BookingController::class, 'update'])->name('update');

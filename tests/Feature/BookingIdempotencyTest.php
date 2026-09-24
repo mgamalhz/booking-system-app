@@ -103,8 +103,8 @@ test('two different idempotency keys for the same slot still create exactly one 
         ->postJson(route('bookings.store'), idempotentBookingPayload($secondCustomer, $resource, $slot), [
             'Idempotency-Key' => 'second-key',
         ])
-        ->assertUnprocessable()
-        ->assertJsonPath('error.details.fields.slot_id.0', 'Slot is not available');
+        ->assertConflict()
+        ->assertJsonPath('error.message', 'The selected slot is no longer available.');
 
     expect(Booking::query()->where('slot_id', $slot->id)->count())->toBe(1)
         ->and(Booking::query()->count())->toBe(1);

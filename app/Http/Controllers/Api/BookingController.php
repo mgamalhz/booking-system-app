@@ -8,11 +8,9 @@ use App\Http\Requests\StoreBookingRequest;
 use App\Http\Requests\UpdateBookingRequest;
 use App\Models\Booking;
 use App\Services\BookingService;
-use Exception;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class BookingController extends Controller
 {
@@ -26,10 +24,6 @@ class BookingController extends Controller
             });
         } catch (LockTimeoutException) {
             throw new ApiConflictException('This slot is currently being booked. Please try again shortly.');
-        } catch (Exception $exception) {
-            throw ValidationException::withMessages([
-                'slot_id' => [$exception->getMessage()],
-            ]);
         }
 
         return response()->json([

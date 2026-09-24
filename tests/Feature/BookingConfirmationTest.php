@@ -101,8 +101,8 @@ test('it rejects api booking creation when the slot is already unavailable', fun
     ], [
         'Idempotency-Key' => 'rejects-unavailable-slot',
     ])
-        ->assertUnprocessable()
-        ->assertJsonPath('error.details.fields.slot_id.0', 'Slot is not available');
+        ->assertConflict()
+        ->assertJsonPath('error.message', 'The selected slot is no longer available.');
 
     expect(Booking::query()->where('slot_id', $slot->id)->count())->toBe(1);
     Queue::assertNotPushed(SendBookingConfirmation::class);
