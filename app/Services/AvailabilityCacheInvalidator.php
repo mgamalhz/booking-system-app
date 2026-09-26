@@ -11,9 +11,7 @@ class AvailabilityCacheInvalidator
     public function resource(int $resourceId, string $reason): void
     {
         try {
-            $cache = Cache::store();
-            $key = AvailabilityCacheKey::resourceVersionKey($resourceId);
-            $cache->forever($key, ((int) $cache->get($key, 1)) + 1);
+            Cache::store()->tags([AvailabilityCacheKey::resourceTag($resourceId)])->flush();
 
             Log::info('availability_cache.invalidated', compact('resourceId', 'reason'));
         } catch (Throwable $exception) {
@@ -28,9 +26,7 @@ class AvailabilityCacheInvalidator
     public function schedule(string $reason): void
     {
         try {
-            $cache = Cache::store();
-            $key = AvailabilityCacheKey::scheduleVersionKey();
-            $cache->forever($key, ((int) $cache->get($key, 1)) + 1);
+            Cache::store()->tags([AvailabilityCacheKey::scheduleTag()])->flush();
 
             Log::info('availability_cache.schedule_invalidated', compact('reason'));
         } catch (Throwable $exception) {

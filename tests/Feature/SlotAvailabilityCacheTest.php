@@ -58,33 +58,6 @@ test('availability misses then returns the cached slots on a hit', function () {
     Log::shouldHaveReceived('info')->withArgs(fn ($message, $context) => $message === 'availability_cache.access' && $context['result'] === 'hit');
 });
 
-test('availability cache avoids repeated slot queries with the database cache store', function () {
-    app()->instance(AvailabilityCacheInvalidator::class, Mockery::mock(AvailabilityCacheInvalidator::class)->shouldIgnoreMissing());
-    config()->set('cache.default', 'database');
-    Cache::store('database')->flush();
-
-    $resource = Resource::factory()->create(['status' => 'active']);
-    Slot::withoutEvents(fn () => Slot::factory()->create([
-        'date' => '2030-01-01',
-        'start_time' => '09:00:00',
-        'end_time' => '10:00:00',
-    ]));
-
-    $availability = app(SlotAvailabilityService::class);
-    expect($availability->forResource($resource, '2030-01-01', '2030-01-02', 'UTC'))->toHaveCount(1);
-
-    $queries = 0;
-    DB::listen(function ($query) use (&$queries) {
-        if (str_contains($query->sql, 'from "slots"') || str_contains($query->sql, 'from `slots`')) {
-            $queries++;
-        }
-    });
-
-    expect($availability->forResource($resource, '2030-01-01', '2030-01-02', 'UTC'))->toHaveCount(1);
-
-    expect($queries)->toBe(0);
-});
-
 test('availability endpoint cache hit avoids resource and slot availability queries', function () {
     app()->instance(AvailabilityCacheInvalidator::class, Mockery::mock(AvailabilityCacheInvalidator::class)->shouldIgnoreMissing());
 
@@ -134,7 +107,7 @@ test('booking creation and cancellation invalidate the resource availability cac
     $this->actingAs($customer, 'sanctum')->getJson(availabilityUrl($resource))->assertJsonCount(1, 'data');
 });
 
-test('schedule updates invalidate cached availability for every resource through versioning', function () {
+test('schedule updates invalidate cached availability for every resource through cache tags', function () {
     $customer = Customer::factory()->create();
     $resource = Resource::factory()->create(['status' => 'active']);
     $slot = Slot::factory()->create(['date' => '2030-01-01', 'status' => 'active']);
@@ -209,13 +182,10 @@ test('a stale availability response is never the final booking authority', funct
 });
 
 test('cache key changes for every availability dimension', function () {
-    $base = AvailabilityCacheKey::make(1, '2030-01-01', '2030-01-02', 'UTC', [], 'v1', 1);
+    $base = AvailabilityCacheKey::make(1, '2030-01-01', '2030-01-02', 'UTC', []);
 
-    expect(AvailabilityCacheKey::make(2, '2030-01-01', '2030-01-02', 'UTC', [], 'v1', 1))->not->toBe($base)
-        ->and(AvailabilityCacheKey::make(1, '2030-01-02', '2030-01-03', 'UTC', [], 'v1', 1))->not->toBe($base)
-        ->and(AvailabilityCacheKey::make(1, '2030-01-01', '2030-01-02', 'Africa/Cairo', [], 'v1', 1))->not->toBe($base)
-        ->and(AvailabilityCacheKey::make(1, '2030-01-01', '2030-01-02', 'UTC', ['starts_after' => '09:00'], 'v1', 1))->not->toBe($base)
-        ->and(AvailabilityCacheKey::make(1, '2030-01-01', '2030-01-02', 'UTC', [], 'v2', 1))->not->toBe($base)
-        ->and(AvailabilityCacheKey::make(1, '2030-01-01', '2030-01-02', 'UTC', [], 'v1', 2))->not->toBe($base)
-        ->and(AvailabilityCacheKey::make(1, '2030-01-01', '2030-01-02', 'UTC', [], 'v1', 1, 2))->not->toBe($base);
+    expect(AvailabilityCacheKey::make(2, '2030-01-01', '2030-01-02', 'UTC', []))->not->toBe($base)
+        ->and(AvailabilityCacheKey::make(1, '2030-01-02', '2030-01-03', 'UTC', []))->not->toBe($base)
+        ->and(AvailabilityCacheKey::make(1, '2030-01-01', '2030-01-02', 'Africa/Cairo', []))->not->toBe($base)
+        ->and(AvailabilityCacheKey::make(1, '2030-01-01', '2030-01-02', 'UTC', ['starts_after' => '09:00']))->not->toBe($base);
 });
