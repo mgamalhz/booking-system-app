@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AvailabilityController;
 use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\BookingDocumentTemporaryUrlController;
 use App\Http\Controllers\AuthController;
@@ -15,6 +16,7 @@ Route::post('register', [AuthController::class, 'register'])->name('auth.registe
 Route::post('login', [AuthController::class, 'login'])->name('auth.login');
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get('resources/{resource}/availability', AvailabilityController::class)->name('resources.availability');
     Route::post('booking', [BookingController::class, 'store'])->name('bookings.store');
     Route::post('booking/{booking}/update', [BookingController::class, 'update'])->name('bookings.update');
     Route::post('booking/{booking}/documents', [S3UploadController::class, 'upload'])->name('bookings.upload');
