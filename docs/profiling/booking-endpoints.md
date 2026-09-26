@@ -1,37 +1,97 @@
-# Booking endpoint profiling
+# Booking index profiling
 
-## Scope and repeatable workload
+## Dataset and request
 
-The workload uses `ProfilingDatasetSeeder`: 250 customers, 50 resources, 5,000 slots, and 3,000 existing bookings. It runs 10 in-process HTTP requests per endpoint against SQLite with the array cache and sync queue, after a fresh migration and seed. Run it with:
+The representative dataset is created by `ProfilingDatasetSeeder`:
+
+- 250 customers
+- 50 resources
+- 5,000 future slots
+- 3,000 existing bookings
+- 1,500 booking documents
+
+The measured request is the authenticated index page:
+
+```bash
+GET /api/booking?per_page=50
+```
+
+For proof, the branch also exposes a local/testing-only bottleneck variant:
+
+```bash
+GET /api/booking?profile_bottleneck=1&per_page=50
+```
+
+Use that variant in Telescope to inspect the N+1 baseline, then retest the default endpoint.
+
+## Reproduce
 
 ```bash
 php artisan migrate:fresh --force
 php artisan db:seed --class=ProfilingDatasetSeeder --force
-php artisan profile:booking-endpoints --iterations=10
+php artisan profile:booking-endpoints --iterations=10 --output=docs/profiling/booking-index-results.json
 ```
 
-The command writes machine-readable output and records p50/p95 latency, query count, database query time, cache hits/misses, queued jobs, Laravel HTTP-client requests, and response statuses. Telescope provides request-by-request inspection when explicitly enabled.
+The command records total latency, p50/p95 latency, query count, query time, memory, cache events, queued jobs, Laravel HTTP-client calls, statuses, and duplicated SQL fingerprints. Raw output is stored in `docs/profiling/booking-index-results.json`.
 
-## Telescope safety
+## Baseline Evidence
 
-Telescope is a development dependency and defaults to disabled in every environment. Enable it only in the profiling environment with `TELESCOPE_ENABLED=true` and set `TELESCOPE_ALLOWED_EMAILS` to a comma-separated operator allow-list. The dashboard always requires an authenticated, allow-listed user, even in `local`. It stores only `api/*`, excludes its own UI, limits request body capture, and redacts passwords, tokens, authorization, cookies, API keys, and CSRF headers. Prefer a separate database through `TELESCOPE_DB_CONNECTION`. Disable it and prune/drop its data after profiling.
+Baseline endpoint: `GET /api/booking?profile_bottleneck=1&per_page=50`
 
-## Evidence
+| Metric | Result |
+|---|---:|
+| Requests | 10 |
+| Status | 200 |
+| Total time | 5,075.23 ms |
+| p50 / p95 | 484.10 ms / 625.14 ms |
+| Queries | 6,053 total, 605.3 per request |
+| Query time | 3,086.14 ms total, 308.61 ms per request |
+| Memory | 14 MB peak |
+| Cache calls | 0 hits, 0 misses |
+| External calls | 0 |
 
-Both runs used the workload above on the same machine and dataset shape. All requests returned their expected 200/201 statuses.
+Duplicated work was the dominant cost. The baseline called relationship query methods inside the response loop even though the page size was only 50:
 
-| Endpoint | p95 before | p95 after | Queries/request before | Queries/request after | Query ms/request before | Query ms/request after |
-|---|---:|---:|---:|---:|---:|---:|
-| `POST /api/login` | 13.14 ms | 12.46 ms | 2.0 | 2.0 | 7.14 ms | 8.16 ms |
-| `POST /api/booking` | 22.18 ms | 14.00 ms | 9.3 | 9.3 | 4.34 ms | 4.11 ms |
-| `POST /api/booking/{id}/update` | 71.92 ms | 44.83 ms | 19.5 | 14.5 | 10.69 ms | 7.29 ms |
+| Duplicated SQL fingerprint | Count |
+|---|---:|
+| `select * from slots where slots.id = ? limit ?` | 2,000 |
+| `select * from customers where customers.id = ? limit ?` | 1,501 |
+| `select * from resources where resources.id = ? limit ?` | 1,500 |
+| `select count(*) ... from booking_documents where booking_id = ?` | 500 |
+| `select exists(...) from booking_documents where booking_id = ?` | 500 |
 
-The update endpoint was the verified query bottleneck. Route binding had already loaded the booking, but the repository fetched it and its three global eager-load relationships twice more, and the controller fetched everything once again. Updating the bound model and doing one response refresh removed 5 queries per request (25.6%), cut measured query time by 31.8%, and reduced p95 latency by 37.7%.
+## Change
 
-Cache activity, queued jobs, and external HTTP requests were all zero in both runs. This is expected for these request variants: the cache lock does not emit cache-value hit/miss events, the chosen one-to-one creation remains pending, and none of the endpoints invokes Laravel's HTTP client. Zeros are retained in the JSON output rather than omitted.
+The highest-impact change was to remove the per-row relationship reads from the index response:
 
-Latency on a developer SQLite database is noisy; query count is the primary deterministic signal. The feature test enforces the optimized query ceiling. Raw captured results are in `docs/profiling/results-before.json` and `docs/profiling/results-after.json`.
+- `BookingRepository::indexPage()` uses `withoutEagerLoads()` so the model-level default eager loads do not pull more than this endpoint needs.
+- It explicitly eager loads `customer`, `resource`, and `slot` with selected columns.
+- It uses `withCount('documents')` instead of per-booking `documents()->count()` and `documents()->exists()` calls.
+- The controller maps the already-loaded relationships instead of calling relation query builders.
 
-## Production profiling notes
+## Verified Result
 
-Repeat the command against an isolated copy of production-shaped data, never the live database because the workload writes bookings and tokens. Keep Telescope enabled only for the short capture window and use `php artisan telescope:prune --hours=1` afterwards. Compare runs with the same database engine, queue/cache configuration, PHP build, machine, and iteration count.
+Optimized endpoint: `GET /api/booking?per_page=50`
+
+| Metric | Baseline | Optimized |
+|---|---:|---:|
+| Total time | 5,075.23 ms | 173.14 ms |
+| p95 latency | 625.14 ms | 26.45 ms |
+| Queries/request | 605.3 | 5.0 |
+| Query time/request | 308.61 ms | 4.34 ms |
+| Duplicated SQL fingerprints | 5 | 0 |
+| Cache calls | 0 | 0 |
+| External calls | 0 | 0 |
+| Memory peak | 14 MB | 14 MB |
+
+This reduced query count by 99.2% and p95 latency by 95.8% for the measured request. The remaining queries are the fixed-cost page/auth/eager-load work for the request; there are no per-row relationship queries left.
+
+## Tool Overhead
+
+The JSON measurement is taken by an in-process Artisan command with Telescope and Debugbar out of the request path. That separates application cost from development-tool overhead. Telescope is still useful for request-by-request inspection of the bottleneck variant, but its own storage writes, watchers, serialization, and UI queries should not be mixed into the final application-cost number.
+
+Debugbar has the same problem: it collects and renders diagnostic data on each request. That changes latency and memory, and it can make an endpoint look slower than it is. Use it to inspect locally, then verify with the repeatable command.
+
+## Production Restrictions
+
+Telescope and Debugbar must be restricted in production because they can expose request bodies, headers, tokens, SQL, model data, exceptions, jobs, cache keys, and timing information. They also add database writes and memory/CPU work to normal traffic. Telescope in this app is opt-in through `TELESCOPE_ENABLED`, protected by an authenticated allow-list, scoped away from its own UI path, and configured to redact sensitive request data. Keep it enabled only for short profiling windows, prefer an isolated profiling database, and prune its data afterwards.
