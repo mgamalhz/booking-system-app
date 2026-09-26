@@ -6,11 +6,10 @@ The service uses Laravel's application-wide default cache store (`CACHE_STORE`),
 
 ## Keys and tags
 
-The key contains a schema version and a SHA-256 digest of the resource ID, inclusive date range, requested timezone, normalized filters, configured key version, and the current schedule version. Each entry is tagged `availability:resource:{id}`.
+The key contains a SHA-256 digest of the resource ID, inclusive date range, requested timezone, and normalized filters. Each entry is written with two Redis cache tags: `availability:schedule` and `availability:resource:{id}`.
 
 - Creating, cancelling, updating, deleting, or restoring a booking invalidates the old and/or new resource tag after the database transaction commits.
-- Creating or changing a slot schedule increments a global schedule version, making every prior schedule key unreachable without an expensive global key scan.
-- Change `BOOKING_AVAILABILITY_CACHE_VERSION` when the response shape or availability rules change.
+- Creating or changing a slot schedule flushes the schedule tag, invalidating every cached availability response without an expensive global key scan.
 
 ## Correctness and resilience
 

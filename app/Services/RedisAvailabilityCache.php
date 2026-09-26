@@ -8,7 +8,7 @@ use Closure;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Cache\LockProvider;
 use Illuminate\Contracts\Cache\LockTimeoutException;
-use Illuminate\Contracts\Cache\Repository as CacheRepository;
+use Illuminate\Cache\Repository as CacheRepository;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 use Throwable;
@@ -43,14 +43,15 @@ final class RedisAvailabilityCache implements AvailabilityCacheInterface
     private function rememberSafely(int $resourceId, AvailabilityCriteria $criteria, Closure $resolveSlots, float $startedAt): array
     {
         $cache = $this->cache->store();
-        $key = $this->key(
-            $resourceId,
-            $criteria,
-            (int) $cache->get(AvailabilityCacheKey::scheduleVersionKey(), 1),
-            (int) $cache->get(AvailabilityCacheKey::resourceVersionKey($resourceId), 1),
-        );
+        throw_unless($cache->supportsTags(), \LogicException::class, 'The default cache store must support cache tags.');
 
-        return $this->cachedOrLocked($cache->getStore(), $cache, $key, $resourceId, $resolveSlots, $startedAt);
+        $taggedCache = $cache->tags([
+            AvailabilityCacheKey::scheduleTag(),
+            AvailabilityCacheKey::resourceTag($resourceId),
+        ]);
+        $key = $this->key($resourceId, $criteria);
+
+        return $this->cachedOrLocked($cache->getStore(), $taggedCache, $key, $resourceId, $resolveSlots, $startedAt);
     }
 
     private function cachedOrLocked(object $store, CacheRepository $cache, string $key, int $resourceId, Closure $resolveSlots, float $startedAt): array
@@ -100,10 +101,10 @@ final class RedisAvailabilityCache implements AvailabilityCacheInterface
         return $this->hit($slots, $result, $resourceId, $startedAt);
     }
 
-    private function key(int $resourceId, AvailabilityCriteria $criteria, int $scheduleVersion, int $resourceVersion): string
+    private function key(int $resourceId, AvailabilityCriteria $criteria): string
     {
         return AvailabilityCacheKey::make($resourceId, $criteria->startDate, $criteria->endDate,
-            $criteria->timezone, $criteria->filters, (string) config('booking.availability_cache.version', 'v1'), $scheduleVersion, $resourceVersion);
+            $criteria->timezone, $criteria->filters);
     }
 
     private function cached(CacheRepository $cache, string $key): ?array
