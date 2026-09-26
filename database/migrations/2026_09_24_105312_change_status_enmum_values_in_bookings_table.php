@@ -24,7 +24,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('bookings', function (Blueprint $table) {
-            $table->dropColumn('status');
+            $table->enum('status', ['pending', 'confirmed', 'canceled'])
+                ->default('pending')
+                ->change();
         });
     }
 };
