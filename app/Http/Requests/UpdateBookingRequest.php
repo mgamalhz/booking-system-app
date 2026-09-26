@@ -25,7 +25,7 @@ class UpdateBookingRequest extends FormRequest
                     ->where('slot_id', $this->slot_id),
             ],
             'slot_id' => ['sometimes', 'integer', 'exists:slots,id'],
-            'status' => ['sometimes', Rule::in(['pending', 'confirmed', 'canceled'])],
+            'status' => ['sometimes', Rule::in(['pending', 'confirmed', 'canceled', 'completed'])],
             'type' => ['sometimes', 'nullable', Rule::in(['one-on-one', 'recurring', 'group'])],
             'max_participants' => ['sometimes', 'nullable', 'integer', 'min:1'],
             'recurrence_rule' => ['sometimes', 'nullable', Rule::in(['weekly', 'biweekly', 'monthly'])],

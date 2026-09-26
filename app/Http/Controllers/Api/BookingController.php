@@ -41,7 +41,9 @@ class BookingController extends Controller
         abort_if((int) $booking->customer_id !== (int) auth()->id(), 403);
 
         $booking = DB::transaction(function () use ($request, $booking, $bookingService) {
-            return $bookingService->updateExistingBooking($booking, $request->validated());
+            $booking = $bookingService->updateExistingBooking($booking, $request->validated());
+
+            return $booking->fresh();
         });
 
         return response()->json([
