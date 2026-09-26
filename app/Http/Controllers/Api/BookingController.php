@@ -9,9 +9,9 @@ use App\Http\Requests\UpdateBookingRequest;
 use App\Models\Booking;
 use App\Services\BookingService;
 use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
 class BookingController extends Controller
@@ -68,9 +68,13 @@ class BookingController extends Controller
 
     private function indexPayload(LengthAwarePaginator $bookings): array
     {
-        return [
-            'success' => true,
-            'data' => $bookings->getCollection()->map(fn (Booking $booking): array => [
+        $data = [];
+        foreach ($bookings->items() as $booking) {
+            if (! $booking instanceof Booking) {
+                continue;
+            }
+
+            $data[] = [
                 'id' => $booking->id,
                 'status' => $booking->status,
                 'type' => $booking->type,
@@ -87,11 +91,16 @@ class BookingController extends Controller
                 ],
                 'slot' => [
                     'id' => $booking->slot->id,
-                    'date' => $booking->slot->date?->toDateString(),
+                    'date' => $booking->slot->date->toDateString(),
                     'start_time' => $booking->slot->start_time,
                     'end_time' => $booking->slot->end_time,
                 ],
-            ]),
+            ];
+        }
+
+        return [
+            'success' => true,
+            'data' => $data,
             'meta' => [
                 'current_page' => $bookings->currentPage(),
                 'per_page' => $bookings->perPage(),
@@ -102,31 +111,44 @@ class BookingController extends Controller
 
     private function bottleneckIndexPayload(LengthAwarePaginator $bookings): array
     {
-        return [
-            'success' => true,
-            'data' => $bookings->getCollection()->map(fn (Booking $booking): array => [
+        $data = [];
+        foreach ($bookings->items() as $booking) {
+            if (! $booking instanceof Booking) {
+                continue;
+            }
+
+            $customer = $booking->customer()->first();
+            $resource = $booking->resource()->first();
+            $slot = $booking->slot()->first();
+
+            $data[] = [
                 'id' => $booking->id,
                 'status' => $booking->status,
                 'type' => $booking->type,
                 'documents_count' => $booking->documents()->count(),
                 'has_documents' => $booking->documents()->exists(),
                 'customer' => [
-                    'id' => $booking->customer()->first()?->id,
-                    'name' => $booking->customer()->first()?->name,
-                    'email' => $booking->customer()->first()?->email,
+                    'id' => $customer?->id,
+                    'name' => $customer?->name,
+                    'email' => $customer?->email,
                 ],
                 'resource' => [
-                    'id' => $booking->resource()->first()?->id,
-                    'name' => $booking->resource()->first()?->name,
-                    'type' => $booking->resource()->first()?->type,
+                    'id' => $resource?->id,
+                    'name' => $resource?->name,
+                    'type' => $resource?->type,
                 ],
                 'slot' => [
-                    'id' => $booking->slot()->first()?->id,
-                    'date' => $booking->slot()->first()?->date?->toDateString(),
-                    'start_time' => $booking->slot()->first()?->start_time,
-                    'end_time' => $booking->slot()->first()?->end_time,
+                    'id' => $slot?->id,
+                    'date' => $slot?->date?->toDateString(),
+                    'start_time' => $slot?->start_time,
+                    'end_time' => $slot?->end_time,
                 ],
-            ]),
+            ];
+        }
+
+        return [
+            'success' => true,
+            'data' => $data,
             'meta' => [
                 'current_page' => $bookings->currentPage(),
                 'per_page' => $bookings->perPage(),
