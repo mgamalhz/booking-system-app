@@ -21,6 +21,7 @@ class ProfilingDatasetSeeder extends Seeder
             ['name' => 'Profile Customer', 'password' => $password, 'phone' => '+10000000000',
                 'address' => '1 Profile Way', 'city' => 'Cairo', 'state' => 'Cairo', 'zip' => '00000', 'country' => 'EG']
         );
+        $customerId = (int) $customer->getKey();
 
         Customer::factory()->count(249)->create();
         $resources = Resource::factory()->count(50)->create();
@@ -41,12 +42,30 @@ class ProfilingDatasetSeeder extends Seeder
         $resourceIds = $resources->pluck('id')->values();
         $bookings = [];
         foreach ($slotIds as $index => $slotId) {
-            $bookings[] = ['customer_id' => $customer->id, 'resource_id' => $resourceIds[$index % $resourceIds->count()],
+            $bookings[] = ['customer_id' => $customerId, 'resource_id' => $resourceIds[$index % $resourceIds->count()],
                 'slot_id' => $slotId, 'status' => $index % 4 === 0 ? 'pending' : 'confirmed',
                 'type' => 'one-on-one', 'created_at' => $now, 'updated_at' => $now];
         }
         foreach (array_chunk($bookings, 500) as $chunk) {
             DB::table('bookings')->insert($chunk);
+        }
+
+        $bookingIds = DB::table('bookings')->orderBy('id')->limit(1500)->pluck('id');
+        $documents = [];
+        foreach ($bookingIds as $index => $bookingId) {
+            $documents[] = [
+                'booking_id' => $bookingId,
+                'disk' => 'documents',
+                'key' => "booking-documents/profile-{$bookingId}-{$index}.pdf",
+                'original_name' => "profile-{$bookingId}.pdf",
+                'mime' => 'application/pdf',
+                'size' => 1024 + $index,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+        foreach (array_chunk($documents, 500) as $chunk) {
+            DB::table('booking_documents')->insert($chunk);
         }
     }
 }

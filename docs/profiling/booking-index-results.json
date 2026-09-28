@@ -1,0 +1,56 @@
+{
+    "generated_at": "2026-09-26T19:57:56+00:00",
+    "iterations": 10,
+    "dataset": {
+        "customers": 250,
+        "slots": 5000,
+        "bookings": 3000,
+        "booking_documents": 1500
+    },
+    "endpoints": {
+        "GET \/api\/booking?profile_bottleneck=1": {
+            "queries": 6053,
+            "query_ms": 3086.1400000000035,
+            "cache_hits": 0,
+            "cache_misses": 0,
+            "jobs": 0,
+            "external_requests": 0,
+            "statuses": [
+                200
+            ],
+            "latency_total_ms": 5075.23,
+            "latency_p50_ms": 484.1,
+            "latency_p95_ms": 625.14,
+            "memory_usage_peak_mb": 2,
+            "memory_peak_mb": 14,
+            "queries_per_request": 605.3,
+            "query_ms_per_request": 308.61,
+            "duplicated_query_fingerprints": {
+                "select * from `slots` where `slots`.`id` = ? limit ?": 2000,
+                "select * from `customers` where `customers`.`id` = ? limit ?": 1501,
+                "select * from `resources` where `resources`.`id` = ? limit ?": 1500,
+                "select count(*) as `aggregate` from `booking_documents` where `booking_documents`.`booking_id` = ? and `booking_documents`.`booking_id` is not null and `booking_documents`.`deleted_at` is null": 500,
+                "select exists(select * from `booking_documents` where `booking_documents`.`booking_id` = ? and `booking_documents`.`booking_id` is not null and `booking_documents`.`deleted_at` is null) as `exists`": 500
+            }
+        },
+        "GET \/api\/booking": {
+            "queries": 50,
+            "query_ms": 43.419999999999995,
+            "cache_hits": 0,
+            "cache_misses": 0,
+            "jobs": 0,
+            "external_requests": 0,
+            "statuses": [
+                200
+            ],
+            "latency_total_ms": 173.14,
+            "latency_p50_ms": 14.44,
+            "latency_p95_ms": 26.45,
+            "memory_usage_peak_mb": 0,
+            "memory_peak_mb": 14,
+            "queries_per_request": 5,
+            "query_ms_per_request": 4.34,
+            "duplicated_query_fingerprints": []
+        }
+    }
+}

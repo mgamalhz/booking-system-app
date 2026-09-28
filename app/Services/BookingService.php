@@ -135,6 +135,16 @@ class BookingService
         return $this->bookingRepository->all();
     }
 
+    public function getBookingIndex(int $perPage): LengthAwarePaginator
+    {
+        return $this->bookingRepository->indexPage($perPage);
+    }
+
+    public function getBottleneckBookingIndex(int $perPage): LengthAwarePaginator
+    {
+        return $this->bookingRepository->bottleneckIndexPage($perPage);
+    }
+
     public function getBookingById(int $id): Booking
     {
         return $this->bookingRepository->find($id);
