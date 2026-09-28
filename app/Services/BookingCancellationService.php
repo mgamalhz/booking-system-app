@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Events\BookingCancelled;
+use App\Exceptions\InvalidBookingStatusTransition;
 use App\Models\Booking;
 use App\Models\CancellationFeeSetting;
 use App\Repositories\Interfaces\BookingCancellationRepositoryInterface;
@@ -35,6 +37,10 @@ class BookingCancellationService
             throw new Exception('Booking is already canceled.');
         }
 
+        if (! in_array($booking->status, ['pending', 'confirmed'], true)) {
+            throw InvalidBookingStatusTransition::for($booking->id, (string) $booking->status, 'canceled');
+        }
+
         $slotStartsAt = $this->slotStartsAt($booking);
 
         if ($cancelledAt->greaterThanOrEqualTo($slotStartsAt)) {
@@ -43,7 +49,18 @@ class BookingCancellationService
 
         $fee = $this->calculateFee($feeSettings, $slotStartsAt, $cancelledAt, $baseAmount);
 
+        $fromStatus = (string) $booking->status;
         $booking = $this->bookings->cancel($booking);
+
+        BookingCancelled::dispatch(
+            $booking->id,
+            $booking->customer_id,
+            $booking->slot_id,
+            $booking->resource_id,
+            $fromStatus,
+            'canceled',
+            $cancelledAt->toISOString(),
+        );
 
         return new BookingCancellationResult($booking, $fee);
     }

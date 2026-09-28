@@ -21,7 +21,7 @@ class BookingFactory extends Factory
     public function definition(): array
     {
         return [
-            'status' => $this->faker->randomElement(['pending', 'canceled', 'confirmed']),
+            'status' => 'pending',
             'customer_id' => Customer::factory(1)->create()->pluck('id')->first(),
             'resource_id' => Resource::factory(1)->create()->pluck('id')->first(),
             'slot_id' => Slot::factory(1)->create()->pluck('id')->first(),

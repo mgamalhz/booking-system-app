@@ -13,6 +13,7 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     Queue::fake();
 
+    config()->set('cache.default', 'array');
     config()->set('booking.lock.wait_seconds', 0);
     config()->set('booking.lock.ttl_seconds', 10);
 });
