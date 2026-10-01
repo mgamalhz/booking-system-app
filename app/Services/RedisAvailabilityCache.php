@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Data\AvailabilityCriteria;
+use App\Models\Resource;
 use App\Services\Contracts\AvailabilityCacheInterface;
 use Closure;
 use Illuminate\Cache\Repository as CacheRepository;
@@ -18,10 +19,11 @@ final class RedisAvailabilityCache implements AvailabilityCacheInterface
     public function __construct(private readonly CacheFactory $cache, private readonly LoggerInterface $logger) {}
 
     public function remember(
-        int $resourceId,
+        Resource $resource,
         AvailabilityCriteria $criteria,
         Closure $resolveSlots): array
     {
+        $resourceId = $resource->id;
         $startedAt = microtime(true);
         $load = function () use ($resolveSlots): array {
             try {

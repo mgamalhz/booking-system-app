@@ -15,8 +15,6 @@ class AvailabilityController extends Controller
         Resource $resource,
         SlotAvailabilityService $availability,
     ): JsonResponse {
-        abort_unless($resource->status === 'active', 404);
-
         return response()->json([
             'data' => $availability->forResource(
                 $resource,

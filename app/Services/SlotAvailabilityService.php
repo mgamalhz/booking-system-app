@@ -21,6 +21,8 @@ class SlotAvailabilityService
         string $timezone,
         array $filters = [],
     ): array {
+        abort_unless($resource->status === 'active', 404);
+
         $criteria = new AvailabilityCriteria($startDate, $endDate, $timezone, $filters);
 
         return $this->cache->remember(

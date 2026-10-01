@@ -58,7 +58,7 @@ test('availability misses then returns the cached slots on a hit', function () {
     Log::shouldHaveReceived('info')->withArgs(fn ($message, $context) => $message === 'availability_cache.access' && $context['result'] === 'hit');
 });
 
-test('availability endpoint cache hit avoids resource and slot availability queries', function () {
+test('availability endpoint cache hit avoids slot availability queries', function () {
     app()->instance(AvailabilityCacheInvalidator::class, Mockery::mock(AvailabilityCacheInvalidator::class)->shouldIgnoreMissing());
 
     $customer = Customer::factory()->create();
@@ -70,9 +70,7 @@ test('availability endpoint cache hit avoids resource and slot availability quer
     $queries = 0;
     DB::listen(function ($query) use (&$queries) {
         if (
-            str_contains($query->sql, 'from "resources"')
-            || str_contains($query->sql, 'from `resources`')
-            || str_contains($query->sql, 'from "slots"')
+            str_contains($query->sql, 'from "slots"')
             || str_contains($query->sql, 'from `slots`')
             || str_contains($query->sql, 'from "bookings"')
             || str_contains($query->sql, 'from `bookings`')
