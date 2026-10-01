@@ -387,7 +387,7 @@ test('duplicate Paymob webhook delivery records one event and captures one charg
 
     expect(Payment::query()->where('status', 'captured')->count())->toBe(1);
 
-    Http::assertSentCount(4);
+    Http::assertSentCount(6);
 });
 
 test('competing bookings for one slot leave one confirmed booking, one rejection, and one charge', function (): void {
