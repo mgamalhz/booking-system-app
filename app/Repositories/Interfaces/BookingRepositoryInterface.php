@@ -25,6 +25,10 @@ interface BookingRepositoryInterface
      */
     public function all(): LengthAwarePaginator;
 
+    public function indexPage(int $perPage): LengthAwarePaginator;
+
+    public function bottleneckIndexPage(int $perPage): LengthAwarePaginator;
+
     public function find(int $id): Booking;
 
     public function findBy(string $columnName, mixed $value): Booking;

@@ -3,10 +3,12 @@
 namespace App\Listeners;
 
 use App\Events\BookingConfirmed;
+use App\Models\Booking;
 use App\Notifications\BookingConfirmationNotification;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Notification;
 
-class BookingConfirmationNotificationListener
+class BookingConfirmationNotificationListener implements ShouldQueue
 {
     /**
      * Create the event listener.
@@ -18,6 +20,8 @@ class BookingConfirmationNotificationListener
      */
     public function handle(BookingConfirmed $event): void
     {
-        Notification::send($event->booking->customer, new BookingConfirmationNotification($event->booking));
+        $booking = Booking::query()->with('customer')->findOrFail($event->bookingId);
+
+        Notification::send($booking->customer, new BookingConfirmationNotification($booking));
     }
 }

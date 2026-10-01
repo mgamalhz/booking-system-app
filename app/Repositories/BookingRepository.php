@@ -44,6 +44,27 @@ class BookingRepository implements BookingCancellationRepositoryInterface, Booki
         return Booking::query()->paginate();
     }
 
+    public function indexPage(int $perPage): LengthAwarePaginator
+    {
+        return Booking::query()
+            ->withoutEagerLoads()
+            ->with([
+                'customer:id,name,email',
+                'resource:id,name,type',
+                'slot:id,date,start_time,end_time',
+            ])
+            ->withCount('documents')
+            ->latest('id')
+            ->paginate($perPage);
+    }
+
+    public function bottleneckIndexPage(int $perPage): LengthAwarePaginator
+    {
+        return Booking::query()
+            ->latest('id')
+            ->paginate($perPage);
+    }
+
     public function find(int $id): Booking
     {
         /** @var Booking|null $booking */
