@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\Resource;
 use App\Models\Slot;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Paymob\Laravel\Contracts\PaymobClientContract;
 use Paymob\Laravel\DTO\AuthenticationResponseDto;
@@ -16,6 +17,10 @@ use Paymob\Laravel\DTO\RegisterOrderData;
 use Paymob\Laravel\DTO\RequestPaymentKeyData;
 
 uses(RefreshDatabase::class);
+
+beforeEach(function () {
+    config(['cache.default' => 'array']);
+});
 
 function swapPaymobClientForBookingConfirmationTest(): void
 {
@@ -54,22 +59,12 @@ function swapPaymobClientForBookingConfirmationTest(): void
     });
 }
 
-test('it dispatches booking confirmation job after a booking is confirmed', function () {
+test('it dispatches booking confirmation event after a booking is confirmed', function () {
     Queue::fake();
+    Event::fake([BookingConfirmed::class]);
     swapPaymobClientForBookingConfirmationTest();
 
-use Illuminate\Support\Facades\Event;
-
-uses(RefreshDatabase::class);
-
-beforeEach(function () {
-    config(['cache.default' => 'array']);
-});
-
-test('it dispatches booking confirmation job after a booking is confirmed', function () {
-    Event::fake([BookingConfirmed::class]);
     $customer = Customer::factory()->create();
-
     $booking = Booking::factory()->create([
         'customer_id' => $customer->id,
         'status' => 'pending',
@@ -92,9 +87,8 @@ test('it dispatches booking confirmation job after a booking is confirmed', func
 
 test('it creates api bookings through the service as pending and does not dispatch confirmation', function () {
     Queue::fake();
-    config()->set('cache.default', 'array');
-
     Event::fake([BookingConfirmed::class]);
+
     $customer = Customer::factory()->create();
 
     $response = $this->actingAs($customer, 'sanctum')->postJson(route('bookings.store'), [
@@ -136,11 +130,9 @@ test('it rejects booking updates from another user', function () {
 
 test('it rejects api booking creation when the slot is already unavailable', function () {
     Queue::fake();
-    config()->set('cache.default', 'array');
-
     Event::fake([BookingConfirmed::class]);
-    $customer = Customer::factory()->create();
 
+    $customer = Customer::factory()->create();
     $slot = Slot::factory()->create();
 
     Booking::factory()->create([
