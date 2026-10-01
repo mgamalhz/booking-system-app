@@ -10,6 +10,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Paymob\Laravel\Contracts\PaymobCapturable;
+use Paymob\Laravel\DTO\CapturePaymentResponseDto;
+use Paymob\Laravel\Models\Payment;
 
 /**
  * @property int $customer_id
@@ -17,7 +20,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property-read Customer $customer
  * @property-read Slot $slot
  */
-class Booking extends Model
+class Booking extends Model implements PaymobCapturable
 {
     /** @use HasFactory<BookingFactory> */
     use HasFactory , SoftDeletes;
@@ -86,5 +89,21 @@ class Booking extends Model
     public function newEloquentBuilder($query): BookingQueryBuilder
     {
         return new BookingQueryBuilder($query);
+    }
+
+    public function isPaymobCaptured(): bool
+    {
+        return Payment::query()
+            ->where('order_type', self::class)
+            ->where('order_id', (string) $this->id)
+            ->where('status', 'captured')
+            ->exists();
+    }
+
+    public function markPaymobCaptured(CapturePaymentResponseDto $response): void
+    {
+        $this->forceFill([
+            'status' => 'confirmed',
+        ])->save();
     }
 }

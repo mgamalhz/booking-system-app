@@ -129,6 +129,10 @@ class ProfileBookingEndpoints extends Command
         $this->activeEndpoint = null;
     }
 
+    /**
+     * @param  array<string, array<string, mixed>>  $metrics
+     * @return array<string, array<string, mixed>>
+     */
     private function summarize(array $metrics, int $iterations): array
     {
         foreach ($metrics as &$row) {
