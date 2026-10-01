@@ -3,8 +3,10 @@
 namespace App\Listeners;
 
 use App\Events\BookingConfirmed;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Support\Facades\Log;
 
-class LogConfirmedBooking
+class LogConfirmedBooking implements ShouldQueue
 {
     /**
      * Create the event listener.
@@ -14,8 +16,22 @@ class LogConfirmedBooking
     /**
      * Handle the event.
      */
-    public function handle(BookingConfirmed $event): void
+    public function handle(object $event): void
     {
-        logger('Booking confirmed: '.$event->booking->id);
+        if ($event instanceof BookingConfirmed && $event->booking !== null) {
+            Log::debug('Booking confirmed: '.$event->bookingId, []);
+
+            return;
+        }
+
+        Log::info('Booking status changed', [
+            'booking_id' => $event->bookingId,
+            'customer_id' => $event->customerId,
+            'slot_id' => $event->slotId,
+            'resource_id' => $event->resourceId,
+            'from_status' => $event->fromStatus,
+            'to_status' => $event->toStatus,
+            'occurred_at' => $event->occurredAt,
+        ]);
     }
 }

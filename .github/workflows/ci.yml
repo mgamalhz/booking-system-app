@@ -71,7 +71,7 @@ jobs:
     name: Deploy Staging
     runs-on: ubuntu-latest
     needs: [style, analyse, tests]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.STAGING_DEPLOY_ENABLED == 'true'
     environment:
       name: staging
       url: ${{ vars.STAGING_HEALTH_URL }}

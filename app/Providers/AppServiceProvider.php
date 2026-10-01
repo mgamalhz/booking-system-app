@@ -2,9 +2,12 @@
 
 namespace App\Providers;
 
+use App\Events\BookingCancelled;
+use App\Events\BookingCompleted;
 use App\Events\BookingConfirmed;
-use App\Listeners\BookingConfirmationNotificationListener;
+use App\Jobs\SendBookingConfirmation;
 use App\Listeners\LogConfirmedBooking;
+use App\Listeners\RecordBookingStatusEvent;
 use App\Listeners\SendFailedJobAlert;
 use App\Models\Booking;
 use App\Models\Resource;
