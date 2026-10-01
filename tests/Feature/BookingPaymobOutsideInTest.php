@@ -366,7 +366,11 @@ test('duplicate Paymob webhook delivery records one event and captures one charg
 
     expect(Payment::query()->where('status', 'captured')->count())->toBe(1);
 
-    Http::assertSentCount(6);
+    $captureRequests = Http::recorded(fn (Request $request): bool => $request->url() === paymobBaseUrl().'/api/acceptance/capture?token=auth-token'
+        && $request['transaction_id'] === 987654321
+        && $request['amount_cents'] === 25000);
+
+    expect($captureRequests)->toHaveCount(1);
 });
 
 test('competing bookings for one slot leave one confirmed booking, one rejection, and one charge', function (): void {
