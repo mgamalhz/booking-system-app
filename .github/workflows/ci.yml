@@ -24,7 +24,7 @@ jobs:
         run: composer config --global github-oauth.github.com "${{ secrets.GITHUBTOKEN }}"
 
       - name: Configure Composer GitHub authentication
-        run: composer config --global github-oauth.github.com "${{ secrets.GITHUBTOKEN }}"
+        run: composer config --global github-oauth.github.com "${{ secrets.GITHUB_TOKEN }}"
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist
@@ -48,7 +48,7 @@ jobs:
         run: composer config --global github-oauth.github.com "${{ secrets.GITHUBTOKEN }}"
 
       - name: Configure Composer GitHub authentication
-        run: composer config --global github-oauth.github.com "${{ secrets.GITHUBTOKEN }}"
+        run: composer config --global github-oauth.github.com "${{ secrets.GITHUB_TOKEN }}"
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist
@@ -81,7 +81,7 @@ jobs:
         run: composer config --global github-oauth.github.com "${{ secrets.GITHUBTOKEN }}"
 
       - name: Configure Composer GitHub authentication
-        run: composer config --global github-oauth.github.com "${{ secrets.GITHUBTOKEN }}"
+        run: composer config --global github-oauth.github.com "${{ secrets.GITHUB_TOKEN }}"
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist
