@@ -25,7 +25,10 @@ use Illuminate\Support\Facades\Event;
  *     cache_misses: int,
  *     jobs: int,
  *     external_requests: int,
- *     statuses: list<int>
+ *     statuses: list<int>,
+ *     memory_usage_bytes: list<int>,
+ *     memory_peak_bytes: list<int>,
+ *     query_fingerprints: array<string, int>
  * }
  * @phpstan-type EndpointSummary array{
  *     queries: int,
@@ -35,10 +38,14 @@ use Illuminate\Support\Facades\Event;
  *     jobs: int,
  *     external_requests: int,
  *     statuses: list<int>,
+ *     latency_total_ms: float,
  *     latency_p50_ms: float,
  *     latency_p95_ms: float,
  *     queries_per_request: float,
- *     query_ms_per_request: float
+ *     query_ms_per_request: float,
+ *     memory_usage_peak_mb: float,
+ *     memory_peak_mb: float,
+ *     duplicated_query_fingerprints: array<string, int>
  * }
  */
 class ProfileBookingEndpoints extends Command

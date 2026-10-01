@@ -57,8 +57,7 @@ class BookingController extends Controller
         Booking $booking,
         BookingService $bookingService,
         BookingPaymentService $bookingPaymentService,
-    ): JsonResponse
-    {
+    ): JsonResponse {
         abort_if((int) $booking->customer_id !== (int) auth()->id(), 403);
 
         $data = $request->validated();
@@ -87,14 +86,14 @@ class BookingController extends Controller
         ]);
     }
 
+    /**
+     * @param  LengthAwarePaginator<int, Booking>  $bookings
+     * @return array<string, mixed>
+     */
     private function indexPayload(LengthAwarePaginator $bookings): array
     {
         $data = [];
         foreach ($bookings->items() as $booking) {
-            if (! $booking instanceof Booking) {
-                continue;
-            }
-
             $data[] = [
                 'id' => $booking->id,
                 'status' => $booking->status,
@@ -130,14 +129,14 @@ class BookingController extends Controller
         ];
     }
 
+    /**
+     * @param  LengthAwarePaginator<int, Booking>  $bookings
+     * @return array<string, mixed>
+     */
     private function bottleneckIndexPayload(LengthAwarePaginator $bookings): array
     {
         $data = [];
         foreach ($bookings->items() as $booking) {
-            if (! $booking instanceof Booking) {
-                continue;
-            }
-
             $customer = $booking->customer()->first();
             $resource = $booking->resource()->first();
             $slot = $booking->slot()->first();
