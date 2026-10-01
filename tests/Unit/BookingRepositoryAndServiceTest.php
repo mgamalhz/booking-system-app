@@ -41,6 +41,8 @@ class BookingRepositoryAndServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        config()->set('cache.default', 'array');
+
         $this->resource = Resource::factory()->create();
         $this->customer = Customer::factory()->create();
         $this->slot = Slot::factory()->create();
