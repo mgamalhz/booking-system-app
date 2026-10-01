@@ -1,19 +1,27 @@
 <?php
 
+use App\Events\BookingCancelled;
 use App\Models\Booking;
 use App\Models\CancellationFeeSetting;
 use App\Models\Slot;
 use App\Repositories\Interfaces\BookingCancellationRepositoryInterface;
 use App\Services\BookingCancellationService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 
 uses(TestCase::class);
+
+beforeEach(function () {
+    Event::fake([BookingCancelled::class]);
+});
 
 function cancellationBooking(string $status, string $date, string $startTime): Booking
 {
     $booking = new Booking([
         'id' => 10,
+        'customer_id' => 30,
+        'resource_id' => 40,
         'status' => $status,
         'slot_id' => 20,
     ]);
