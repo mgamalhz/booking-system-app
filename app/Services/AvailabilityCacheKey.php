@@ -10,8 +10,6 @@ final class AvailabilityCacheKey
         string $endDate,
         string $timezone,
         array $filters,
-        string $version,
-        int $scheduleVersion,
     ): string {
         ksort($filters);
 
@@ -21,11 +19,9 @@ final class AvailabilityCacheKey
             'end' => $endDate,
             'timezone' => $timezone,
             'filters' => $filters,
-            'version' => $version,
-            'schedule_version' => $scheduleVersion,
         ], JSON_THROW_ON_ERROR);
 
-        return 'availability:'.$version.':resource:'.$resourceId.':'.hash('sha256', $dimensions);
+        return 'availability:resource:'.$resourceId.':'.hash('sha256', $dimensions);
     }
 
     public static function resourceTag(int $resourceId): string
@@ -33,8 +29,8 @@ final class AvailabilityCacheKey
         return 'availability:resource:'.$resourceId;
     }
 
-    public static function scheduleVersionKey(): string
+    public static function scheduleTag(): string
     {
-        return 'availability:schedule-version';
+        return 'availability:schedule';
     }
 }
