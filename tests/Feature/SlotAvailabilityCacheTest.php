@@ -148,7 +148,7 @@ test('a stale availability response is never the final booking authority', funct
         'resource_id' => $resource->id,
         'slot_id' => $slot->id,
         'type' => 'one-on-one',
-    ])->assertUnprocessable();
+    ])->assertConflict();
 
     expect(Booking::query()->where('slot_id', $slot->id)->count())->toBe(1);
 });
