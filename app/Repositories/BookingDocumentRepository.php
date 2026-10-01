@@ -10,6 +10,9 @@ use Illuminate\Support\LazyCollection;
 
 class BookingDocumentRepository implements BookingDocumentRepositoryInterface
 {
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function create(array $data): BookingDocument
     {
         /** @var BookingDocument $document */
@@ -18,6 +21,9 @@ class BookingDocumentRepository implements BookingDocumentRepositoryInterface
         return $document;
     }
 
+    /**
+     * @return LazyCollection<int, BookingDocument>
+     */
     public function expiredDeletedDocuments(string $disk, Carbon $cutoff): LazyCollection
     {
         return BookingDocument::onlyTrashed()
@@ -27,6 +33,10 @@ class BookingDocumentRepository implements BookingDocumentRepositoryInterface
             ->lazyById();
     }
 
+    /**
+     * @param  array<int, string>  $keys
+     * @return Collection<int, string>
+     */
     public function orphanedKeys(string $disk, array $keys): Collection
     {
         $existingKeys = BookingDocument::withTrashed()
@@ -39,6 +49,9 @@ class BookingDocumentRepository implements BookingDocumentRepositoryInterface
             ->values();
     }
 
+    /**
+     * @param  array<int, int>  $ids
+     */
     public function forceDeleteTrashedByIds(array $ids): void
     {
         BookingDocument::onlyTrashed()

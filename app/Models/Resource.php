@@ -25,11 +25,17 @@ class Resource extends Model
         'status' => 'string',
     ];
 
+    /**
+     * @return HasMany<Booking, $this>
+     */
     public function bookings(): HasMany
     {
         return $this->hasMany(Booking::class);
     }
 
+    /**
+     * @return HasMany<Slot, $this>
+     */
     public function slots(): HasMany
     {
         return $this->hasMany(Slot::class);
