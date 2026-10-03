@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
+use App\Events\BookingCancelled;
+use App\Events\BookingCompleted;
 use App\Events\BookingConfirmed;
-use App\Listeners\BookingConfirmationNotificationListener;
 use App\Listeners\LogConfirmedBooking;
+use App\Listeners\RecordBookingStatusEvent;
 use App\Listeners\SendFailedJobAlert;
 use App\Models\Booking;
 use App\Models\Resource;
@@ -20,8 +22,8 @@ use App\Repositories\Interfaces\BookingDocumentRepositoryInterface;
 use App\Repositories\Interfaces\BookingRepositoryInterface;
 use App\Repositories\Interfaces\CustomerRepositoryInterface;
 use App\Repositories\Interfaces\PaymentRepositoryInterface;
-use App\Repositories\PaymentRepository;
 use App\Repositories\Interfaces\SlotAvailabilityRepositoryInterface;
+use App\Repositories\PaymentRepository;
 use App\Repositories\SlotAvailabilityRepository;
 use App\Services\Contracts\AvailabilityCacheInterface;
 use App\Services\Contracts\FilesUploadServiceInterface;
@@ -67,8 +69,6 @@ class AppServiceProvider extends ServiceProvider
         Booking::observe(BookingAvailabilityObserver::class);
         Resource::observe(ResourceAvailabilityObserver::class);
         Slot::observe(SlotScheduleObserver::class);
-        Event::listen(BookingConfirmed::class, [BookingConfirmationNotificationListener::class, 'handle']);
-        Event::listen(BookingConfirmed::class, [LogConfirmedBooking::class, 'handle']);
         Event::listen(JobFailed::class, [SendFailedJobAlert::class, 'handle']);
     }
 }
