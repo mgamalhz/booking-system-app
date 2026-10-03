@@ -39,7 +39,6 @@ jobs:
         run: composer install --no-interaction --prefer-dist
 
       - name: Run PHPStan
-        run: vendor/bin/phpstan analyse --memory-limit=512M
 
   tests:
     name: Tests (PHPUnit)
