@@ -7,11 +7,9 @@ use App\Models\Slot;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
-use Illuminate\Queue\Events\JobProcessed;
-use Illuminate\Queue\Worker;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Paymob\Laravel\Contracts\PaymobClientContract;
@@ -106,25 +104,8 @@ function confirmBookingThroughHttp(Customer $customer, Booking $booking)
         ->postJson(route('bookings.update', $booking), ['status' => 'confirmed']);
 }
 
-function runQueuedJob(string $queue = 'default'): void
 function processPaymobCapture(Booking $booking, int $transactionId = 987654321, int $amountCents = 25000): void
 {
-    app('queue.worker')->shouldQuit = false;
-    app('queue.worker')->setCache(app('cache')->store('array'));
-    Worker::$pausable = false;
-    Worker::$restartable = false;
-
-    test()->artisan("queue:work database --queue={$queue} --once --tries=1")->assertExitCode(0);
-}
-
-function runQueuedJobsUntilEmpty(string $queues): void
-{
-    app('queue.worker')->shouldQuit = false;
-    app('queue.worker')->setCache(app('cache')->store('array'));
-    Worker::$pausable = false;
-    Worker::$restartable = false;
-
-    test()->artisan("queue:work database --queue={$queues} --stop-when-empty --tries=1")->assertExitCode(0);
     (new ProcessPaymobPayment($booking, $transactionId, $amountCents))
         ->handle(app(PaymobClientContract::class));
 }

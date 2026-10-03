@@ -1,11 +1,13 @@
 <?php
 
+use App\Events\BookingConfirmed;
 use App\Jobs\SendBookingConfirmation;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Resource;
 use App\Models\Slot;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Paymob\Laravel\Contracts\PaymobClientContract;
 use Paymob\Laravel\DTO\AuthenticationResponseDto;
@@ -54,8 +56,9 @@ function swapPaymobClientForBookingConfirmationTest(): void
     });
 }
 
-test('it dispatches booking confirmation job after a booking is confirmed', function () {
+test('it dispatches booking confirmation event after a booking is confirmed', function () {
     Queue::fake();
+    Event::fake([BookingConfirmed::class]);
     swapPaymobClientForBookingConfirmationTest();
 
     $customer = Customer::factory()->create();
@@ -72,17 +75,17 @@ test('it dispatches booking confirmation job after a booking is confirmed', func
         ->assertOk()
         ->assertJsonPath('payment.payment_key', 'payment-token');
 
-    Queue::assertPushed(SendBookingConfirmation::class, function (SendBookingConfirmation $job) use ($booking) {
-        return $job->booking->is($booking)
-            && $job->queue === 'bookings'
-            && $job->afterCommit === true
-            && $job->tries === 3
-            && $job->backoff === [10, 30, 60];
+    Event::assertDispatched(BookingConfirmed::class, function (BookingConfirmed $event) use ($booking) {
+        return $event->bookingId === $booking->id
+            && $event->customerId === $booking->customer_id
+            && $event->fromStatus === 'pending'
+            && $event->toStatus === 'confirmed';
     });
 });
 
 test('it creates api bookings through the service as pending and does not dispatch confirmation', function () {
     Queue::fake();
+    Event::fake([BookingConfirmed::class]);
     config()->set('cache.default', 'array');
 
     $customer = Customer::factory()->create();
@@ -100,6 +103,7 @@ test('it creates api bookings through the service as pending and does not dispat
     expect($booking->status)->toBe('pending');
     expect($booking->customer_id)->toBe($customer->id);
     Queue::assertNotPushed(SendBookingConfirmation::class);
+    Event::assertNotDispatched(BookingConfirmed::class);
 });
 
 test('it requires authentication to create a booking', function () {
@@ -126,6 +130,7 @@ test('it rejects booking updates from another user', function () {
 
 test('it rejects api booking creation when the slot is already unavailable', function () {
     Queue::fake();
+    Event::fake([BookingConfirmed::class]);
     config()->set('cache.default', 'array');
 
     $customer = Customer::factory()->create();
@@ -145,9 +150,11 @@ test('it rejects api booking creation when the slot is already unavailable', fun
         'status' => 'confirmed',
         'type' => 'one-on-one',
     ])
-        ->assertUnprocessable()
-        ->assertJsonValidationErrors('slot_id');
+        ->assertConflict()
+        ->assertJsonPath('error.code', 'conflict')
+        ->assertJsonPath('error.message', 'The selected slot is no longer available.');
 
     expect(Booking::query()->where('slot_id', $slot->id)->count())->toBe(1);
     Queue::assertNotPushed(SendBookingConfirmation::class);
+    Event::assertNotDispatched(BookingConfirmed::class);
 });
