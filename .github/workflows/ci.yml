@@ -60,6 +60,7 @@ jobs:
         run: composer install --no-interaction --prefer-dist
 
       - name: Run PHPStan
+        run:  vendor/bin/phpstan analyse
 
   tests:
     name: Tests (PHPUnit)
