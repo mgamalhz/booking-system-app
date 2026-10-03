@@ -74,6 +74,11 @@ class BookingEventTest extends TestCase
         $booking = Booking::factory()->create([
             'status' => 'pending',
         ]);
+    public function test_booking_confirmed_event_is_dispatched_when_booking_is_updated()
+    {
+        Event::fake([BookingConfirmed::class]);
+
+        $booking = Booking::factory()->create(['status' => 'pending']);
         $this->actingAs(Customer::query()->findOrFail($booking->customer_id), 'sanctum')
             ->post(route('bookings.update', $booking), ['status' => 'confirmed'])
             ->assertOk();
