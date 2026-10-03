@@ -63,6 +63,8 @@ class BookingService
     }
 
     /**
+     * @param  array<string, mixed>  $data
+     *
      * @throws InvalidBookingStatusTransition
      */
     public function updateExistingBooking(Booking $booking, array $data): Booking
@@ -146,11 +148,17 @@ class BookingService
         return $this->bookingRepository->all();
     }
 
+    /**
+     * @return LengthAwarePaginator<int, Booking>
+     */
     public function getBookingIndex(int $perPage): LengthAwarePaginator
     {
         return $this->bookingRepository->indexPage($perPage);
     }
 
+    /**
+     * @return LengthAwarePaginator<int, Booking>
+     */
     public function getBottleneckBookingIndex(int $perPage): LengthAwarePaginator
     {
         return $this->bookingRepository->bottleneckIndexPage($perPage);
