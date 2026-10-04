@@ -37,7 +37,9 @@ test('it returns conflict when another booking attempt already holds the slot lo
 
     try {
         $this->actingAs($customer, 'sanctum')
-            ->postJson(route('bookings.store'), bookingCreationLockPayload($customer, $resource, $slot))
+            ->postJson(route('bookings.store'), bookingCreationLockPayload($customer, $resource, $slot), [
+                'Idempotency-Key' => 'locked-slot',
+            ])
             ->assertConflict()
             ->assertJsonPath('error.code', 'conflict')
             ->assertJsonPath('error.message', 'This slot is currently being booked. Please try again shortly.');
@@ -56,12 +58,16 @@ test('it does not block bookings for different slots while one slot lock is held
 
     Cache::lock("slot:{$lockedSlot->id}:book", 10)->block(0, function () use ($customer, $resource, $availableSlot) {
         $this->actingAs($customer, 'sanctum')
-            ->postJson(route('bookings.store'), bookingCreationLockPayload($customer, $resource, $availableSlot))
+            ->postJson(route('bookings.store'), bookingCreationLockPayload($customer, $resource, $availableSlot), [
+                'Idempotency-Key' => 'available-slot',
+            ])
             ->assertCreated();
     });
 
     $this->actingAs($customer, 'sanctum')
-        ->postJson(route('bookings.store'), bookingCreationLockPayload($customer, $resource, $lockedSlot))
+        ->postJson(route('bookings.store'), bookingCreationLockPayload($customer, $resource, $lockedSlot), [
+            'Idempotency-Key' => 'formerly-locked-slot',
+        ])
         ->assertCreated();
 
     expect(Booking::query()->whereIn('slot_id', [$lockedSlot->id, $availableSlot->id])->count())->toBe(2);

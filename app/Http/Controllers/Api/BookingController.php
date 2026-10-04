@@ -38,7 +38,7 @@ class BookingController extends Controller
 
                 return $booking->fresh();
             });
-        } catch (LockTimeoutException $exception) {
+        } catch (LockTimeoutException) {
             throw new ApiConflictException('This slot is currently being booked. Please try again shortly.');
         }
 

@@ -1,0 +1,132 @@
+<?php
+
+namespace App\Http\Middleware;
+
+use App\Exceptions\ApiConflictException;
+use App\Models\IdempotencyKey;
+use Closure;
+use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\Response;
+use Throwable;
+
+class HandleBookingIdempotency
+{
+    public function handle(Request $request, Closure $next): Response
+    {
+        $header = trim((string) $request->header('Idempotency-Key'));
+
+        if ($header === '') {
+            DB::beginTransaction();
+
+            try {
+                /** @var Response $response */
+                $response = $next($request);
+            } catch (Throwable $exception) {
+                DB::rollBack();
+
+                throw $exception;
+            }
+
+            DB::rollBack();
+            if ($response->getStatusCode() >= 400) {
+                return $response;
+            }
+
+            return response()->json([
+                'message' => 'The Idempotency-Key header is required.',
+            ], 400);
+        }
+
+        $customerId = (int) $request->user()->id;
+        $payloadHash = $this->hashPayload($request->all());
+
+        try {
+            return DB::transaction(function () use ($request, $next, $header, $customerId, $payloadHash) {
+                $idempotencyKey = IdempotencyKey::query()
+                    ->where('customer_id', $customerId)
+                    ->where('idempotency_key', $header)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($idempotencyKey !== null) {
+                    return $this->replayStoredResponse($idempotencyKey, $payloadHash);
+                }
+
+                $idempotencyKey = IdempotencyKey::query()->create([
+                    'customer_id' => $customerId,
+                    'idempotency_key' => $header,
+                    'payload_hash' => $payloadHash,
+                ]);
+
+                /** @var Response $response */
+                $response = $next($request);
+
+                if ($response->getStatusCode() >= 400) {
+                    throw new HttpResponseException($response);
+                }
+
+                $idempotencyKey->update([
+                    'response_status' => $response->getStatusCode(),
+                    'response_body' => $response->getContent(),
+                ]);
+
+                return $response;
+            });
+        } catch (UniqueConstraintViolationException) {
+            return DB::transaction(function () use ($header, $customerId, $payloadHash) {
+                $idempotencyKey = IdempotencyKey::query()
+                    ->where('customer_id', $customerId)
+                    ->where('idempotency_key', $header)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                return $this->replayStoredResponse($idempotencyKey, $payloadHash);
+            });
+        } catch (LockTimeoutException) {
+            throw new ApiConflictException('This slot is currently being booked. Please try again shortly.');
+        } catch (HttpResponseException $exception) {
+            return $exception->getResponse();
+        }
+    }
+
+    private function replayStoredResponse(IdempotencyKey $idempotencyKey, string $payloadHash): Response
+    {
+        if (! hash_equals($idempotencyKey->payload_hash, $payloadHash)) {
+            return response()->json([
+                'message' => 'The Idempotency-Key header was already used with a different payload.',
+            ], 422);
+        }
+
+        return response((string) $idempotencyKey->response_body, (int) $idempotencyKey->response_status)
+            ->header('Content-Type', 'application/json');
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function hashPayload(array $payload): string
+    {
+        return hash('sha256', json_encode($this->sortPayload($payload), JSON_THROW_ON_ERROR));
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function sortPayload(array $payload): array
+    {
+        ksort($payload);
+
+        foreach ($payload as $key => $value) {
+            if (is_array($value)) {
+                $payload[$key] = $this->sortPayload($value);
+            }
+        }
+
+        return $payload;
+    }
+}

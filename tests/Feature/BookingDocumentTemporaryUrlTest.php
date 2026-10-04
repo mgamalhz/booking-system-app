@@ -22,7 +22,7 @@ test('authorized user receives a temporary document url', function () {
     ]);
 
     $this->actingAs($customer, 'sanctum')
-        ->getJson(route('booking-documents.temporary-url', $document))
+        ->getJson(route('bookings.booking-documents.temporary-url', $document))
         ->assertOk()
         ->assertJsonStructure([
             'data' => [
@@ -54,7 +54,7 @@ test('unauthorized user is refused before a temporary document url is generated'
     ]);
 
     $this->actingAs($otherUser, 'sanctum')
-        ->getJson(route('booking-documents.temporary-url', $document))
+        ->getJson(route('bookings.booking-documents.temporary-url', $document))
         ->assertForbidden();
 });
 
@@ -79,6 +79,6 @@ test('user with the same email as the customer cannot receive a temporary docume
     ]);
 
     $this->actingAs($user, 'sanctum')
-        ->getJson(route('booking-documents.temporary-url', $document))
+        ->getJson(route('bookings.booking-documents.temporary-url', $document))
         ->assertForbidden();
 });
