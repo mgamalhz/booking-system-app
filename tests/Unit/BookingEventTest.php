@@ -10,7 +10,9 @@ use App\Models\Booking;
 use App\Models\Customer;
 use App\Notifications\BookingConfirmationNotification;
 use Illuminate\Broadcasting\PrivateChannel;
+use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
@@ -32,7 +34,7 @@ class BookingEventTest extends TestCase
         Queue::fake();
         $this->swapPaymobClient();
 
-        $booking = Booking::factory()->create();
+        $booking = Booking::factory()->create(['status' => 'pending']);
         $this->actingAs(Customer::query()->findOrFail($booking->customer_id), 'sanctum')
             ->post(route('bookings.update', $booking), ['status' => 'confirmed'])
             ->assertOk();
@@ -55,8 +57,6 @@ class BookingEventTest extends TestCase
 
     public function test_booking_confirmation_job_is_marked_to_dispatch_after_commit_after_payment_capture(): void
     {
-        Queue::fake();
-
         $booking = Booking::factory()->create([
             'status' => 'pending',
         ]);

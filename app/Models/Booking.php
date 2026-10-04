@@ -31,6 +31,7 @@ class Booking extends Model implements PaymobCapturable
             'customer_id',
             'resource_id',
             'slot_id',
+            'active_one_to_one_slot_id',
             'status',
             'reminder_sent_at',
             'start_date',
@@ -49,6 +50,17 @@ class Booking extends Model implements PaymobCapturable
         'status' => 'string',
         'reminder_sent_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (Booking $booking): void {
+            $booking->active_one_to_one_slot_id = $booking->type === 'one-on-one'
+                && in_array($booking->status, ['pending', 'confirmed'], true)
+                && $booking->deleted_at === null
+                    ? $booking->slot_id
+                    : null;
+        });
+    }
 
     /**
      * @return BelongsTo<Customer, $this>

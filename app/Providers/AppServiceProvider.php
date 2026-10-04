@@ -2,14 +2,16 @@
 
 namespace App\Providers;
 
-use App\Events\BookingCancelled;
-use App\Events\BookingCompleted;
 use App\Events\BookingConfirmed;
-use App\Jobs\SendBookingConfirmation;
+use App\Listeners\BookingConfirmationNotificationListener;
 use App\Listeners\LogConfirmedBooking;
-use App\Listeners\RecordBookingStatusEvent;
 use App\Listeners\SendFailedJobAlert;
 use App\Models\Booking;
+use App\Models\Resource;
+use App\Models\Slot;
+use App\Observers\BookingAvailabilityObserver;
+use App\Observers\ResourceAvailabilityObserver;
+use App\Observers\SlotScheduleObserver;
 use App\Repositories\BookingDocumentRepository;
 use App\Repositories\BookingRepository;
 use App\Repositories\CustomerRepository;
@@ -19,7 +21,11 @@ use App\Repositories\Interfaces\BookingRepositoryInterface;
 use App\Repositories\Interfaces\CustomerRepositoryInterface;
 use App\Repositories\Interfaces\PaymentRepositoryInterface;
 use App\Repositories\PaymentRepository;
+use App\Repositories\Interfaces\SlotAvailabilityRepositoryInterface;
+use App\Repositories\SlotAvailabilityRepository;
+use App\Services\Contracts\AvailabilityCacheInterface;
 use App\Services\Contracts\FilesUploadServiceInterface;
+use App\Services\RedisAvailabilityCache;
 use App\Services\S3FilesUploadService;
 use App\Strategies\BookingStrategies\BookingStrategyInterface;
 use App\Strategies\BookingStrategies\BookingStrategyResolver;
@@ -37,17 +43,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        if (config('telescope.enabled') && class_exists(\Laravel\Telescope\TelescopeServiceProvider::class)) {
-            $this->app->register(TelescopeServiceProvider::class);
-        }
-
         App::bind(BookingRepositoryInterface::class, BookingRepository::class);
         App::bind(BookingCancellationRepositoryInterface::class, BookingRepository::class);
         App::bind(BookingDocumentRepositoryInterface::class, BookingDocumentRepository::class);
         App::bind(CustomerRepositoryInterface::class, CustomerRepository::class);
         App::bind(PaymentRepositoryInterface::class, PaymentRepository::class);
+        App::bind(SlotAvailabilityRepositoryInterface::class, SlotAvailabilityRepository::class);
         App::bind(BookingStrategyInterface::class, BookingStrategyResolver::class);
         App::bind(FilesUploadServiceInterface::class, S3FilesUploadService::class);
+        App::bind(AvailabilityCacheInterface::class, RedisAvailabilityCache::class);
     }
 
     /**
@@ -55,17 +59,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        foreach ([BookingConfirmed::class, BookingCancelled::class, BookingCompleted::class] as $event) {
-            Event::listen($event, [RecordBookingStatusEvent::class, 'handle']);
-            Event::listen($event, [LogConfirmedBooking::class, 'handle']);
-        }
-
-        Event::listen(BookingConfirmed::class, function (BookingConfirmed $event): void {
-            $booking = $event->booking ?? Booking::query()->findOrFail($event->bookingId);
-
-            SendBookingConfirmation::dispatch($booking)->afterCommit();
-        });
-
+        Booking::observe(BookingAvailabilityObserver::class);
+        Resource::observe(ResourceAvailabilityObserver::class);
+        Slot::observe(SlotScheduleObserver::class);
+        Event::listen(BookingConfirmed::class, [BookingConfirmationNotificationListener::class, 'handle']);
+        Event::listen(BookingConfirmed::class, [LogConfirmedBooking::class, 'handle']);
         Event::listen(JobFailed::class, [SendFailedJobAlert::class, 'handle']);
     }
 }
