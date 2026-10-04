@@ -104,6 +104,16 @@ function confirmBookingThroughHttp(Customer $customer, Booking $booking)
         ->postJson(route('bookings.update', $booking), ['status' => 'confirmed']);
 }
 
+function createPaymobBookingThroughHttp(Customer $customer, Resource $resource, Slot $slot, string $idempotencyKey)
+{
+    return test()->actingAs($customer, 'sanctum')
+        ->postJson(
+            route('bookings.store'),
+            paymobBookingPayload($customer, $resource, $slot),
+            ['Idempotency-Key' => $idempotencyKey],
+        );
+}
+
 function processPaymobCapture(Booking $booking, int $transactionId = 987654321, int $amountCents = 25000): void
 {
     (new ProcessPaymobPayment($booking, $transactionId, $amountCents))
@@ -210,8 +220,7 @@ test('authenticated booking confirmation queues work and captures payment from a
 
         [$customer, $resource, $slot] = paymobBookingActors();
 
-        $createResponse = $this->actingAs($customer, 'sanctum')
-            ->postJson(route('bookings.store'), paymobBookingPayload($customer, $resource, $slot))
+        $createResponse = createPaymobBookingThroughHttp($customer, $resource, $slot, 'paymob-success')
             ->assertCreated()
             ->assertJsonPath('booking.status', 'pending');
 
@@ -287,8 +296,7 @@ test('gateway timeout while starting payment leaves a failed payment attempt and
     fakeTimedOutPaymobOrderCreation();
     [$customer, $resource, $slot] = paymobBookingActors();
 
-    $createResponse = $this->actingAs($customer, 'sanctum')
-        ->postJson(route('bookings.store'), paymobBookingPayload($customer, $resource, $slot))
+    $createResponse = createPaymobBookingThroughHttp($customer, $resource, $slot, 'paymob-timeout')
         ->assertCreated();
 
     $booking = Booking::query()->findOrFail($createResponse->json('booking.id'));
@@ -316,8 +324,7 @@ test('invalid Paymob webhook signature is rejected without a capture', function 
     fakeSuccessfulPaymobStartAndCapture();
     [$customer, $resource, $slot] = paymobBookingActors();
 
-    $createResponse = $this->actingAs($customer, 'sanctum')
-        ->postJson(route('bookings.store'), paymobBookingPayload($customer, $resource, $slot))
+    $createResponse = createPaymobBookingThroughHttp($customer, $resource, $slot, 'paymob-invalid-signature')
         ->assertCreated();
 
     $booking = Booking::query()->findOrFail($createResponse->json('booking.id'));
@@ -341,8 +348,7 @@ test('duplicate Paymob webhook delivery records one event and captures one charg
     fakeSuccessfulPaymobStartAndCapture();
     [$customer, $resource, $slot] = paymobBookingActors();
 
-    $createResponse = $this->actingAs($customer, 'sanctum')
-        ->postJson(route('bookings.store'), paymobBookingPayload($customer, $resource, $slot))
+    $createResponse = createPaymobBookingThroughHttp($customer, $resource, $slot, 'paymob-duplicate-webhook')
         ->assertCreated();
 
     $booking = Booking::query()->findOrFail($createResponse->json('booking.id'));
@@ -381,12 +387,13 @@ test('competing bookings for one slot leave one confirmed booking, one rejection
     [$customer, $resource, $slot] = paymobBookingActors();
     $rejectedCustomer = Customer::factory()->create();
 
-    $accepted = $this->actingAs($customer, 'sanctum')
-        ->postJson(route('bookings.store'), paymobBookingPayload($customer, $resource, $slot))
+    $accepted = createPaymobBookingThroughHttp($customer, $resource, $slot, 'paymob-competing-accepted')
         ->assertCreated();
 
     $this->actingAs($rejectedCustomer, 'sanctum')
-        ->postJson(route('bookings.store'), paymobBookingPayload($rejectedCustomer, $resource, $slot))
+        ->postJson(route('bookings.store'), paymobBookingPayload($rejectedCustomer, $resource, $slot), [
+            'Idempotency-Key' => 'paymob-competing-rejected',
+        ])
         ->assertConflict()
         ->assertJsonPath('error.code', 'conflict')
         ->assertJsonPath('error.message', 'The selected slot is no longer available.');
