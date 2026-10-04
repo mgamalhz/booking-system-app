@@ -11,6 +11,7 @@ use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 
 class HandleBookingIdempotency
 {
@@ -19,6 +20,22 @@ class HandleBookingIdempotency
         $header = trim((string) $request->header('Idempotency-Key'));
 
         if ($header === '') {
+            DB::beginTransaction();
+
+            try {
+                /** @var Response $response */
+                $response = $next($request);
+            } catch (Throwable $exception) {
+                DB::rollBack();
+
+                throw $exception;
+            }
+
+            DB::rollBack();
+            if ($response->getStatusCode() >= 400) {
+                return $response;
+            }
+
             return response()->json([
                 'message' => 'The Idempotency-Key header is required.',
             ], 400);
