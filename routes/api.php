@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\BookingDocumentTemporaryUrlController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\S3UploadController;
+use App\Http\Middleware\HandleBookingIdempotency;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -18,9 +19,11 @@ Route::post('login', [AuthController::class, 'login'])->name('auth.login');
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('resources/{resource}/availability', AvailabilityController::class)->name('resources.availability');
     Route::get('bookings', [BookingController::class, 'index'])->name('bookings.index');
-    Route::post('booking', [BookingController::class, 'store'])->name('bookings.store');
-    Route::post('booking/{booking}/update', [BookingController::class, 'update'])->name('bookings.update');
-    Route::post('booking/{booking}/documents', [S3UploadController::class, 'upload'])->name('bookings.upload');
-    Route::get('booking-documents/{booking_document}/temporary-url', BookingDocumentTemporaryUrlController::class)
-        ->name('booking-documents.temporary-url');
+    Route::post('bookings', [BookingController::class, 'store'])
+        ->middleware(HandleBookingIdempotency::class)
+        ->name('bookings.store');
+    Route::post('bookings/{booking}/update', [BookingController::class, 'update'])->name('bookings.update');
+    Route::post('bookings/{booking}/documents', [S3UploadController::class, 'upload'])->name('bookings.upload');
+    Route::get('bookings/booking-documents/{booking_document}/temporary-url', BookingDocumentTemporaryUrlController::class)
+        ->name('bookings.booking-documents.temporary-url');
 });
