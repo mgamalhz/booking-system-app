@@ -11,7 +11,6 @@
     "require": {
         "php": "^8.3",
         "laravel/framework": "^13.0",
-        "laravel/horizon": "^5.48",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
         "league/flysystem-aws-s3-v3": "3.0",
@@ -64,7 +63,6 @@
             "@php artisan config:clear --ansi",
             "@php artisan test"
         ],
-        "analyse": "phpstan analyse --memory-limit=1G",
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi"

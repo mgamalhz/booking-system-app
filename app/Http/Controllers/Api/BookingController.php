@@ -86,14 +86,14 @@ class BookingController extends Controller
         ]);
     }
 
-    /**
-     * @param  LengthAwarePaginator<int, Booking>  $bookings
-     * @return array<string, mixed>
-     */
     private function indexPayload(LengthAwarePaginator $bookings): array
     {
         $data = [];
         foreach ($bookings->items() as $booking) {
+            if (! $booking instanceof Booking) {
+                continue;
+            }
+
             $data[] = [
                 'id' => $booking->id,
                 'status' => $booking->status,
@@ -129,14 +129,14 @@ class BookingController extends Controller
         ];
     }
 
-    /**
-     * @param  LengthAwarePaginator<int, Booking>  $bookings
-     * @return array<string, mixed>
-     */
     private function bottleneckIndexPayload(LengthAwarePaginator $bookings): array
     {
         $data = [];
         foreach ($bookings->items() as $booking) {
+            if (! $booking instanceof Booking) {
+                continue;
+            }
+
             $customer = $booking->customer()->first();
             $resource = $booking->resource()->first();
             $slot = $booking->slot()->first();

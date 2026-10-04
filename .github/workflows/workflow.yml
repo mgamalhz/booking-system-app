@@ -22,9 +22,6 @@ jobs:
          php-version: 8.4
          tools: composer:v2
 
-     - name: Configure Composer authentication
-       run: composer config --global github-oauth.github.com "${{ secrets.COMPOSER_GITHUB_TOKEN }}"
-
      - name: Cache Composer dependencies
        uses: actions/cache@v4
        with:
@@ -49,9 +46,6 @@ jobs:
           with:
             php-version: 8.4
             tools: composer:v2
-
-        - name: Configure Composer authentication
-          run: composer config --global github-oauth.github.com "${{ secrets.COMPOSER_GITHUB_TOKEN }}"
 
         - name: Cache Composer dependencies
           uses: actions/cache@v4
@@ -113,9 +107,6 @@ jobs:
           extensions: pdo_mysql, redis
           coverage: xdebug
           tools: composer:v2
-
-      - name: Configure Composer authentication
-        run: composer config --global github-oauth.github.com "${{ secrets.COMPOSER_GITHUB_TOKEN }}"
 
       - name: Cache Composer dependencies
         uses: actions/cache@v4

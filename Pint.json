@@ -1,6 +1,0 @@
-{
-    "preset" : "laravel",
-    "rules"  : {
-        "ordered_imports": true
-    }
-}

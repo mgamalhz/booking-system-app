@@ -3,12 +3,11 @@
 namespace App\Factories;
 
 use App\Models\Booking;
+use Illuminate\Support\Arr;
 
 class OneToOneBookingFactory implements BookingFactoryInterface
 {
     /**
-     * @param  array<string, mixed>  $data
-     *
      * @throws \Exception
      */
     public function create(array $data): Booking
@@ -23,7 +22,7 @@ class OneToOneBookingFactory implements BookingFactoryInterface
 
     }
 
-    private function isSlotAvailability(mixed $slotId): bool
+    private function isSlotAvailability($slotId): bool
     {
         return Booking::query()
             ->where('slot_id', $slotId)
@@ -34,13 +33,13 @@ class OneToOneBookingFactory implements BookingFactoryInterface
     /**
      * @throws \Exception
      */
-    private function checkSlotAndCustomerCount(mixed $customerId, mixed $slotId): void
+    private function checkSlotAndCustomerCount($customerId, $slotId): void
     {
-        if (is_countable($customerId) && count($customerId) > 1) {
+        if (count(Arr::wrap($customerId)) > 1) {
             throw new \Exception('More one Customer in this type is not available');
         }
 
-        if (is_countable($slotId) && count($slotId) > 1) {
+        if (count(Arr::wrap($slotId)) > 1) {
             throw new \Exception('More one Slot in this type is not available');
         }
     }

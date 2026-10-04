@@ -6,14 +6,13 @@ use App\Http\Controllers\Concerns\ReturnsApiResponses;
 use App\Http\Controllers\Controller;
 use App\Models\BookingDocument;
 use App\Models\Customer;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
 
 class BookingDocumentTemporaryUrlController extends Controller
 {
     use ReturnsApiResponses;
 
-    public function __invoke(BookingDocument $booking_document): JsonResponse
+    public function __invoke(BookingDocument $booking_document)
     {
         $bookingDocument = $booking_document;
 

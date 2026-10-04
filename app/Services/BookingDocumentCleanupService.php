@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\BookingDocument;
 use App\Repositories\Interfaces\BookingDocumentRepositoryInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -49,9 +48,6 @@ class BookingDocumentCleanupService
             );
     }
 
-    /**
-     * @param  LazyCollection<int, BookingDocument>  $documents
-     */
     private function deleteDocumentBatch(LazyCollection $documents): int
     {
         $documents = $documents->collect();
@@ -77,9 +73,6 @@ class BookingDocumentCleanupService
             );
     }
 
-    /**
-     * @param  Collection<int, string>  $keys
-     */
     private function deleteOrphanedBatch(Collection $keys): int
     {
         $orphanedKeys = $this->documents->orphanedKeys(

@@ -9,9 +9,6 @@ use Illuminate\Support\LazyCollection;
 
 interface BookingDocumentRepositoryInterface
 {
-    /**
-     * @param  array<string, mixed>  $data
-     */
     public function create(array $data): BookingDocument;
 
     /**

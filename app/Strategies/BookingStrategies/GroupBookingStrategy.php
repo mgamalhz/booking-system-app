@@ -9,9 +9,7 @@ use Exception;
 
 class GroupBookingStrategy implements BookingStrategyInterface
 {
-    /**
-     * @param  array<string, mixed>  $data
-     */
+    /** @retrun  Booking $booking */
     public function createBooking(array $data): Booking
     {
         if (! isset($data['max_participants'])) {
@@ -32,9 +30,6 @@ class GroupBookingStrategy implements BookingStrategyInterface
         ]);
     }
 
-    /**
-     * @param  array<string, mixed>  $data
-     */
     private function determineGroupBookingStatus(Slot $slot, array $data): string
     {
         $currentParticipants = Booking::where('slot_id', $slot->id)

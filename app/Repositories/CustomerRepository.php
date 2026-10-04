@@ -7,9 +7,6 @@ use App\Repositories\Interfaces\CustomerRepositoryInterface;
 
 class CustomerRepository implements CustomerRepositoryInterface
 {
-    /**
-     * @param  array<string, mixed>  $data
-     */
     public function create(array $data): Customer
     {
         /** @var Customer $customer */
