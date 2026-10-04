@@ -24,6 +24,13 @@ interface BookingRepositoryInterface
 
     public function findBy(string $columnName, $value): Booking;
 
+    /**
+     * @return Collection<int, Booking>
+     */
+    public function getPendingBookingsForCustomer(int $customerId): Collection;
+
+    public function findPendingBookingForCustomer(int $bookingId, int $customerId): Booking;
+
     public function getBookingForReminder(int $daysBeforeReminder): Collection;
 
     public function claimBookingReminders(int $daysBeforeReminder): Collection;

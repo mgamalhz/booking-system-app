@@ -10,32 +10,35 @@ use App\Models\Booking;
 use App\Models\Customer;
 use App\Notifications\BookingConfirmationNotification;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
+use Paymob\Laravel\Contracts\PaymobClientContract;
+use Paymob\Laravel\DTO\AuthenticationResponseDto;
+use Paymob\Laravel\DTO\CapturePaymentResponseDto;
+use Paymob\Laravel\DTO\OrderResponseDto;
+use Paymob\Laravel\DTO\PaymentKeyResponseDto;
+use Paymob\Laravel\DTO\RegisterOrderData;
+use Paymob\Laravel\DTO\RequestPaymentKeyData;
 use Tests\TestCase;
 
 class BookingEventTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_booking_confirmed_event_is_dispatched_when_booking_is_updated()
+    public function test_booking_confirmation_job_is_not_pushed_while_payment_is_processing()
     {
-        Event::fake([BookingConfirmed::class]);
+        Queue::fake();
+        $this->swapPaymobClient();
 
         $booking = Booking::factory()->create(['status' => 'pending']);
         $this->actingAs(Customer::query()->findOrFail($booking->customer_id), 'sanctum')
             ->post(route('bookings.update', $booking), ['status' => 'confirmed'])
             ->assertOk();
 
-        Event::assertDispatched(BookingConfirmed::class, function (BookingConfirmed $event) use ($booking) {
-            return $event->bookingId === $booking->id
-                && $event->fromStatus === 'pending'
-                && $event->toStatus === 'confirmed';
-        });
+        $this->assertSame('pending', $booking->fresh()->status);
+        Queue::assertNotPushed(SendBookingConfirmation::class);
 
     }
 
@@ -50,15 +53,60 @@ class BookingEventTest extends TestCase
         Queue::assertNotPushed(SendBookingConfirmation::class);
     }
 
-    public function test_booking_confirmed_event_is_marked_to_dispatch_after_commit(): void
+    public function test_booking_confirmation_job_is_marked_to_dispatch_after_commit_after_payment_capture(): void
     {
+        Queue::fake();
+
         $booking = Booking::factory()->create([
             'status' => 'pending',
         ]);
 
-        $event = new BookingConfirmed($booking);
+        $booking->markPaymobCaptured(new CapturePaymentResponseDto([
+            'success' => true,
+            'transaction_id' => 123456,
+        ]));
 
-        $this->assertInstanceOf(ShouldDispatchAfterCommit::class, $event);
+        Queue::assertPushed(SendBookingConfirmation::class, function (SendBookingConfirmation $job) use ($booking) {
+            return $job->booking->is($booking)
+                && $job->afterCommit === true;
+        });
+    }
+
+    private function swapPaymobClient(): void
+    {
+        config()->set('paymob.integration_id', 123);
+        config()->set('paymob.iframe_id', 456);
+
+        $this->app->instance(PaymobClientContract::class, new class implements PaymobClientContract
+        {
+            public function authenticate(): AuthenticationResponseDto
+            {
+                throw new \BadMethodCallException('Not used in this test.');
+            }
+
+            public function registerOrder(RegisterOrderData $data): OrderResponseDto
+            {
+                return new OrderResponseDto(id: 987654);
+            }
+
+            public function requestPaymentKey(RequestPaymentKeyData $data): PaymentKeyResponseDto
+            {
+                return new PaymentKeyResponseDto(token: 'payment-token');
+            }
+
+            public function paymentRedirectUrl(string $paymentToken, ?int $iframeId = null): string
+            {
+                return rtrim((string) config('paymob.base_url'), '/')
+                    .'/api/acceptance/iframes/'
+                    .(int) config('paymob.iframe_id')
+                    .'?payment_token='.urlencode($paymentToken);
+            }
+
+            public function capture(int $transactionId, int $amountCents): CapturePaymentResponseDto
+            {
+                throw new \BadMethodCallException('Not used in this test.');
+            }
+        });
     }
 
     public function test_booking_confirmed_event_keeps_booking_and_broadcasts_on_private_channel(): void
