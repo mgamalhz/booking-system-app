@@ -14,6 +14,10 @@ class SlotAvailabilityService
         private readonly AvailabilityCacheInterface $cache,
     ) {}
 
+    /**
+     * @param  array{starts_after?: string, ends_before?: string}  $filters
+     * @return array<int, array{slot_id: int, starts_at: string, ends_at: string}>
+     */
     public function forResource(
         Resource $resource,
         string $startDate,
