@@ -1,9 +1,8 @@
 name: CI
 
 on:
-  pull_request:
-    branches: [main]
   push:
+  pull_request:
     branches: [main]
 
 jobs:
@@ -17,6 +16,16 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
+          extensions: pcntl, posix
+
+      - name: Configure Composer GitHub authentication
+        run: composer config --global github-oauth.github.com "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Configure Composer GitHub authentication
+        run: composer config --global github-oauth.github.com "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Configure Composer GitHub authentication
+        run: composer config --global github-oauth.github.com "${{ secrets.GITHUB_TOKEN }}"
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist
@@ -34,15 +43,35 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
+          extensions: pcntl, posix
+
+      - name: Configure Composer GitHub authentication
+        run: composer config --global github-oauth.github.com "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Configure Composer GitHub authentication
+        run: composer config --global github-oauth.github.com "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Configure Composer GitHub authentication
+        run: composer config --global github-oauth.github.com "${{ secrets.GITHUB_TOKEN }}"
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist
 
       - name: Run PHPStan
+        run:  vendor/bin/phpstan analyse
 
   tests:
     name: Tests (PHPUnit)
     runs-on: ubuntu-latest
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+      CACHE_STORE: array
+      QUEUE_CONNECTION: sync
+      SESSION_DRIVER: array
+      MAIL_MAILER: array
+      TELESCOPE_ENABLED: false
     steps:
       - uses: actions/checkout@v4
 
@@ -50,7 +79,16 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: pdo_sqlite
+          extensions: pcntl, posix, pdo_sqlite
+
+      - name: Configure Composer GitHub authentication
+        run: composer config --global github-oauth.github.com "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Configure Composer GitHub authentication
+        run: composer config --global github-oauth.github.com "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Configure Composer GitHub authentication
+        run: composer config --global github-oauth.github.com "${{ secrets.GITHUB_TOKEN }}"
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist
@@ -59,9 +97,6 @@ jobs:
         run: cp .env.example .env && php artisan key:generate
 
       - name: Run migrations
-        env:
-          DB_CONNECTION: sqlite
-          DB_DATABASE: ":memory:"
         run: php artisan migrate --force
 
       - name: Run tests

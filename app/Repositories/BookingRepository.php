@@ -12,6 +12,9 @@ use Illuminate\Support\Collection;
 
 class BookingRepository implements BookingCancellationRepositoryInterface, BookingRepositoryInterface
 {
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function create(array $data): Booking
     {
         /** @var Booking $booking */
@@ -20,6 +23,9 @@ class BookingRepository implements BookingCancellationRepositoryInterface, Booki
         return $booking;
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function update(array $data, int $id): bool
     {
         return $this->find($id)->update($data);
@@ -30,11 +36,17 @@ class BookingRepository implements BookingCancellationRepositoryInterface, Booki
         return $this->find($id)->delete();
     }
 
+    /**
+     * @return LengthAwarePaginator<int, Booking>
+     */
     public function all(): LengthAwarePaginator
     {
         return Booking::query()->paginate();
     }
 
+    /**
+     * @return LengthAwarePaginator<int, Booking>
+     */
     public function indexPage(int $perPage): LengthAwarePaginator
     {
         return Booking::query()
@@ -49,6 +61,9 @@ class BookingRepository implements BookingCancellationRepositoryInterface, Booki
             ->paginate($perPage);
     }
 
+    /**
+     * @return LengthAwarePaginator<int, Booking>
+     */
     public function bottleneckIndexPage(int $perPage): LengthAwarePaginator
     {
         return Booking::query()
@@ -77,6 +92,36 @@ class BookingRepository implements BookingCancellationRepositoryInterface, Booki
         return $booking;
     }
 
+    /**
+     * @return Collection<int, Booking>
+     */
+    public function getPendingBookingsForCustomer(int $customerId): Collection
+    {
+        return Booking::query()
+            ->where('customer_id', $customerId)
+            ->where('status', 'pending')
+            ->latest()
+            ->get();
+    }
+
+    public function findPendingBookingForCustomer(int $bookingId, int $customerId): Booking
+    {
+        /** @var Booking $booking */
+        $booking = Booking::query()
+            ->where('id', $bookingId)
+            ->where('customer_id', $customerId)
+            ->where('status', 'pending')
+            ->firstOrFail();
+
+        return $booking;
+    }
+
+    /**
+     * @return Collection<int, Booking>
+     */
+    /**
+     * @return Collection<int, Booking>
+     */
     public function getBookingForReminder(int $daysBeforeReminder): Collection
     {
         $reminderDate = Carbon::now()->addDays($daysBeforeReminder)->toDateString();
@@ -90,6 +135,9 @@ class BookingRepository implements BookingCancellationRepositoryInterface, Booki
             ->get();
     }
 
+    /**
+     * @return Collection<int, Booking>
+     */
     public function claimBookingReminders(int $daysBeforeReminder): Collection
     {
         $reminderDate = Carbon::now()->addDays($daysBeforeReminder)->toDateString();

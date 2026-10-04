@@ -16,23 +16,71 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
+use Paymob\Laravel\Contracts\PaymobClientContract;
+use Paymob\Laravel\DTO\AuthenticationResponseDto;
+use Paymob\Laravel\DTO\CapturePaymentResponseDto;
+use Paymob\Laravel\DTO\OrderResponseDto;
+use Paymob\Laravel\DTO\PaymentKeyResponseDto;
+use Paymob\Laravel\DTO\RegisterOrderData;
+use Paymob\Laravel\DTO\RequestPaymentKeyData;
 use Tests\TestCase;
 
 class BookingEventTest extends TestCase
 {
     use RefreshDatabase;
 
+    private function swapPaymobClient(): void
+    {
+        config()->set('paymob.integration_id', 123);
+        config()->set('paymob.iframe_id', 456);
+
+        $this->app->instance(PaymobClientContract::class, new class implements PaymobClientContract
+        {
+            public function authenticate(): AuthenticationResponseDto
+            {
+                throw new \BadMethodCallException('Not used in this test.');
+            }
+
+            public function registerOrder(RegisterOrderData $data): OrderResponseDto
+            {
+                return new OrderResponseDto(id: 987654);
+            }
+
+            public function requestPaymentKey(RequestPaymentKeyData $data): PaymentKeyResponseDto
+            {
+                return new PaymentKeyResponseDto(token: 'payment-token');
+            }
+
+            public function paymentRedirectUrl(string $paymentToken, ?int $iframeId = null): string
+            {
+                return rtrim((string) config('paymob.base_url'), '/')
+                    .'/api/acceptance/iframes/'
+                    .(int) config('paymob.iframe_id')
+                    .'?payment_token='.urlencode($paymentToken);
+            }
+
+            public function capture(int $transactionId, int $amountCents): CapturePaymentResponseDto
+            {
+                throw new \BadMethodCallException('Not used in this test.');
+            }
+        });
+    }
+
     public function test_booking_confirmed_event_is_dispatched_when_booking_is_updated()
     {
         Event::fake([BookingConfirmed::class]);
+        $this->swapPaymobClient();
 
-        $booking = Booking::factory()->create(['status' => 'pending']);
+        $booking = Booking::factory()->create([
+            'status' => 'pending',
+        ]);
         $this->actingAs(Customer::query()->findOrFail($booking->customer_id), 'sanctum')
             ->post(route('bookings.update', $booking), ['status' => 'confirmed'])
             ->assertOk();
 
         Event::assertDispatched(BookingConfirmed::class, function (BookingConfirmed $event) use ($booking) {
             return $event->bookingId === $booking->id
+                && $event->customerId === $booking->customer_id
                 && $event->fromStatus === 'pending'
                 && $event->toStatus === 'confirmed';
         });
@@ -43,7 +91,9 @@ class BookingEventTest extends TestCase
     {
         Queue::fake();
 
-        $booking = Booking::factory()->create();
+        $booking = Booking::factory()->create([
+            'status' => 'pending',
+        ]);
         $this->actingAs(Customer::query()->findOrFail($booking->customer_id), 'sanctum')
             ->post(route('bookings.update', $booking), ['status' => 'pending']);
 

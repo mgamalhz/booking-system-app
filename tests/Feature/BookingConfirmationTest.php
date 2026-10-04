@@ -1,21 +1,66 @@
 <?php
 
 use App\Events\BookingConfirmed;
+use App\Jobs\SendBookingConfirmation;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Resource;
 use App\Models\Slot;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Queue;
+use Paymob\Laravel\Contracts\PaymobClientContract;
+use Paymob\Laravel\DTO\AuthenticationResponseDto;
+use Paymob\Laravel\DTO\CapturePaymentResponseDto;
+use Paymob\Laravel\DTO\OrderResponseDto;
+use Paymob\Laravel\DTO\PaymentKeyResponseDto;
+use Paymob\Laravel\DTO\RegisterOrderData;
+use Paymob\Laravel\DTO\RequestPaymentKeyData;
 
 uses(RefreshDatabase::class);
 
-beforeEach(function () {
-    config(['cache.default' => 'array']);
-});
+function swapPaymobClientForBookingConfirmationTest(): void
+{
+    config()->set('paymob.integration_id', 123);
+    config()->set('paymob.iframe_id', 456);
 
-test('it dispatches booking confirmation job after a booking is confirmed', function () {
+    app()->instance(PaymobClientContract::class, new class implements PaymobClientContract
+    {
+        public function authenticate(): AuthenticationResponseDto
+        {
+            throw new BadMethodCallException('Not used in this test.');
+        }
+
+        public function registerOrder(RegisterOrderData $data): OrderResponseDto
+        {
+            return new OrderResponseDto(id: 987654);
+        }
+
+        public function requestPaymentKey(RequestPaymentKeyData $data): PaymentKeyResponseDto
+        {
+            return new PaymentKeyResponseDto(token: 'payment-token');
+        }
+
+        public function paymentRedirectUrl(string $paymentToken, ?int $iframeId = null): string
+        {
+            return rtrim((string) config('paymob.base_url'), '/')
+                .'/api/acceptance/iframes/'
+                .(int) config('paymob.iframe_id')
+                .'?payment_token='.urlencode($paymentToken);
+        }
+
+        public function capture(int $transactionId, int $amountCents): CapturePaymentResponseDto
+        {
+            throw new BadMethodCallException('Not used in this test.');
+        }
+    });
+}
+
+test('it dispatches booking confirmation event after a booking is confirmed', function () {
+    Queue::fake();
     Event::fake([BookingConfirmed::class]);
+    swapPaymobClientForBookingConfirmationTest();
+
     $customer = Customer::factory()->create();
 
     $booking = Booking::factory()->create([
@@ -26,7 +71,9 @@ test('it dispatches booking confirmation job after a booking is confirmed', func
     $this->actingAs($customer, 'sanctum')
         ->post(route('bookings.update', $booking), [
             'status' => 'confirmed',
-        ])->assertOk();
+        ])
+        ->assertOk()
+        ->assertJsonPath('payment.payment_key', 'payment-token');
 
     Event::assertDispatched(BookingConfirmed::class, function (BookingConfirmed $event) use ($booking) {
         return $event->bookingId === $booking->id
@@ -37,7 +84,10 @@ test('it dispatches booking confirmation job after a booking is confirmed', func
 });
 
 test('it creates api bookings through the service as pending and does not dispatch confirmation', function () {
+    Queue::fake();
     Event::fake([BookingConfirmed::class]);
+    config()->set('cache.default', 'array');
+
     $customer = Customer::factory()->create();
 
     $response = $this->actingAs($customer, 'sanctum')->postJson(route('bookings.store'), [
@@ -54,6 +104,7 @@ test('it creates api bookings through the service as pending and does not dispat
 
     expect($booking->status)->toBe('pending');
     expect($booking->customer_id)->toBe($customer->id);
+    Queue::assertNotPushed(SendBookingConfirmation::class);
     Event::assertNotDispatched(BookingConfirmed::class);
 });
 
@@ -80,7 +131,10 @@ test('it rejects booking updates from another user', function () {
 });
 
 test('it rejects api booking creation when the slot is already unavailable', function () {
+    Queue::fake();
     Event::fake([BookingConfirmed::class]);
+    config()->set('cache.default', 'array');
+
     $customer = Customer::factory()->create();
 
     $slot = Slot::factory()->create();
@@ -104,5 +158,6 @@ test('it rejects api booking creation when the slot is already unavailable', fun
         ->assertJsonPath('error.message', 'The selected slot is no longer available.');
 
     expect(Booking::query()->where('slot_id', $slot->id)->count())->toBe(1);
+    Queue::assertNotPushed(SendBookingConfirmation::class);
     Event::assertNotDispatched(BookingConfirmed::class);
 });

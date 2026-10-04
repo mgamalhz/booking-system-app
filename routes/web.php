@@ -12,3 +12,7 @@ Route::get('/health', function () {
         'service' => config('app.name'),
     ]);
 });
+
+Route::get('/callback', function () {
+    return view('welcome');
+});
