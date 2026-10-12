@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Builders\BookingQueryBuilder;
+use App\Jobs\SendBookingConfirmation;
 use App\ValueObjects\SlotDuration;
 use Database\Factories\BookingFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -117,5 +118,7 @@ class Booking extends Model implements PaymobCapturable
         $this->forceFill([
             'status' => 'confirmed',
         ])->save();
+
+        SendBookingConfirmation::dispatch($this->refresh())->afterCommit();
     }
 }

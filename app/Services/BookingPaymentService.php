@@ -15,7 +15,6 @@ use Paymob\Laravel\DTO\BillingDataDto;
 use Paymob\Laravel\DTO\OrderItemDto;
 use Paymob\Laravel\DTO\RegisterOrderData;
 use Paymob\Laravel\DTO\RequestPaymentKeyData;
-use RuntimeException;
 use Throwable;
 
 class BookingPaymentService
@@ -102,10 +101,7 @@ class BookingPaymentService
 
             Log::error('Paymob HTTP request failed', [
                 'booking_id' => $booking->id,
-                'customer_id' => $customerId,
-                'amount_cents' => $amountCents,
                 'status' => $response->status(),
-                'body' => $response->body(),
             ]);
 
             $this->payments->saveFailedPayment(
@@ -122,34 +118,8 @@ class BookingPaymentService
                 'paymob' => ['Paymob returned an error while creating the payment.'],
             ]);
         } catch (Throwable $exception) {
-            if ($this->isPaymobHttpFailure($exception)) {
-                Log::error('Paymob request failed', [
-                    'booking_id' => $booking->id,
-                    'customer_id' => $customerId,
-                    'amount_cents' => $amountCents,
-                    'exception_class' => $exception::class,
-                    'message' => $exception->getMessage(),
-                ]);
-
-                $this->payments->saveFailedPayment(
-                    paymobReference: $paymentReference,
-                    booking: $booking,
-                    amountCents: $amountCents,
-                    payload: [
-                        'exception_class' => $exception::class,
-                        'message' => $exception->getMessage(),
-                    ],
-                );
-
-                throw ValidationException::withMessages([
-                    'paymob' => ['Paymob returned an error while creating the payment.'],
-                ]);
-            }
-
             Log::error('Local payment creation failed before Paymob completed', [
                 'booking_id' => $booking->id,
-                'customer_id' => $customerId,
-                'amount_cents' => $amountCents,
                 'exception_class' => $exception::class,
                 'message' => $exception->getMessage(),
             ]);
@@ -193,18 +163,7 @@ class BookingPaymentService
 
     private function amountCents(Booking $booking): int
     {
-        return (int) $booking->resource->price * 100;
-    }
-
-    private function isPaymobHttpFailure(Throwable $exception): bool
-    {
-        if (! $exception instanceof RuntimeException) {
-            return false;
-        }
-
-        return str_starts_with($exception->getMessage(), 'Paymob request failed')
-            || str_starts_with($exception->getMessage(), 'Paymob authentication failed')
-            || str_starts_with($exception->getMessage(), 'Could not connect to Paymob');
+        return (int) round($booking->resource->price * 100);
     }
 
     private function billingData(Booking $booking): BillingDataDto

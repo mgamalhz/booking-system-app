@@ -119,9 +119,6 @@ class BookingRepository implements BookingCancellationRepositoryInterface, Booki
     /**
      * @return Collection<int, Booking>
      */
-    /**
-     * @return Collection<int, Booking>
-     */
     public function getBookingForReminder(int $daysBeforeReminder): Collection
     {
         $reminderDate = Carbon::now()->addDays($daysBeforeReminder)->toDateString();

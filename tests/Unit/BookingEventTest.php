@@ -10,9 +10,7 @@ use App\Models\Booking;
 use App\Models\Customer;
 use App\Notifications\BookingConfirmationNotification;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
@@ -28,6 +26,55 @@ use Tests\TestCase;
 class BookingEventTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_booking_confirmation_job_is_not_pushed_while_payment_is_processing()
+    {
+        Queue::fake();
+        $this->swapPaymobClient();
+
+        $booking = Booking::factory()->create([
+            'status' => 'pending',
+        ]);
+        $this->actingAs(Customer::query()->findOrFail($booking->customer_id), 'sanctum')
+            ->post(route('bookings.update', $booking), ['status' => 'confirmed'])
+            ->assertOk();
+
+        $this->assertSame('pending', $booking->fresh()->status);
+        Queue::assertNotPushed(SendBookingConfirmation::class);
+
+    }
+
+    public function test_booking_confirmation_job_is_not_pushed_when_booking_is_not_confirmed()
+    {
+        Queue::fake();
+
+        $booking = Booking::factory()->create([
+            'status' => 'pending',
+        ]);
+        $this->actingAs(Customer::query()->findOrFail($booking->customer_id), 'sanctum')
+            ->post(route('bookings.update', $booking), ['status' => 'pending']);
+
+        Queue::assertNotPushed(SendBookingConfirmation::class);
+    }
+
+    public function test_booking_confirmation_job_is_marked_to_dispatch_after_commit_after_payment_capture(): void
+    {
+        Queue::fake();
+
+        $booking = Booking::factory()->create([
+            'status' => 'pending',
+        ]);
+
+        $booking->markPaymobCaptured(new CapturePaymentResponseDto([
+            'success' => true,
+            'transaction_id' => 123456,
+        ]));
+
+        Queue::assertPushed(SendBookingConfirmation::class, function (SendBookingConfirmation $job) use ($booking) {
+            return $job->booking->is($booking)
+                && $job->afterCommit === true;
+        });
+    }
 
     private function swapPaymobClient(): void
     {
@@ -64,51 +111,6 @@ class BookingEventTest extends TestCase
                 throw new \BadMethodCallException('Not used in this test.');
             }
         });
-    }
-
-    public function test_booking_confirmed_event_is_dispatched_when_booking_is_updated()
-    {
-        Event::fake([BookingConfirmed::class]);
-        $this->swapPaymobClient();
-
-        $booking = Booking::factory()->create([
-            'status' => 'pending',
-        ]);
-        $this->actingAs(Customer::query()->findOrFail($booking->customer_id), 'sanctum')
-            ->post(route('bookings.update', $booking), ['status' => 'confirmed'])
-            ->assertOk();
-
-        Event::assertDispatched(BookingConfirmed::class, function (BookingConfirmed $event) use ($booking) {
-            return $event->bookingId === $booking->id
-                && $event->customerId === $booking->customer_id
-                && $event->fromStatus === 'pending'
-                && $event->toStatus === 'confirmed';
-        });
-
-    }
-
-    public function test_booking_confirmation_job_is_not_pushed_when_booking_is_not_confirmed()
-    {
-        Queue::fake();
-
-        $booking = Booking::factory()->create([
-            'status' => 'pending',
-        ]);
-        $this->actingAs(Customer::query()->findOrFail($booking->customer_id), 'sanctum')
-            ->post(route('bookings.update', $booking), ['status' => 'pending']);
-
-        Queue::assertNotPushed(SendBookingConfirmation::class);
-    }
-
-    public function test_booking_confirmed_event_is_marked_to_dispatch_after_commit(): void
-    {
-        $booking = Booking::factory()->create([
-            'status' => 'pending',
-        ]);
-
-        $event = new BookingConfirmed($booking);
-
-        $this->assertInstanceOf(ShouldDispatchAfterCommit::class, $event);
     }
 
     public function test_booking_confirmed_event_keeps_booking_and_broadcasts_on_private_channel(): void
