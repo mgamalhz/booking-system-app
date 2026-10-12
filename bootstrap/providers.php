@@ -2,8 +2,14 @@
 
 use App\Providers\AppServiceProvider;
 use App\Providers\HorizonServiceProvider;
+use Laravel\Horizon\HorizonApplicationServiceProvider;
 
-return [
+$providers = [
     AppServiceProvider::class,
-    HorizonServiceProvider::class,
 ];
+
+if (class_exists(HorizonApplicationServiceProvider::class)) {
+    $providers[] = HorizonServiceProvider::class;
+}
+
+return $providers;

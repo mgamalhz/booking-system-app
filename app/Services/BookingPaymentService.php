@@ -15,6 +15,7 @@ use Paymob\Laravel\DTO\BillingDataDto;
 use Paymob\Laravel\DTO\OrderItemDto;
 use Paymob\Laravel\DTO\RegisterOrderData;
 use Paymob\Laravel\DTO\RequestPaymentKeyData;
+use RuntimeException;
 use Throwable;
 
 class BookingPaymentService
@@ -116,6 +117,34 @@ class BookingPaymentService
 
             throw ValidationException::withMessages([
                 'paymob' => ['Paymob returned an error while creating the payment.'],
+            ]);
+        } catch (RuntimeException $exception) {
+            Log::error('Local payment creation failed before Paymob completed', [
+                'booking_id' => $booking->id,
+                'exception_class' => $exception::class,
+                'message' => $exception->getMessage(),
+            ]);
+
+            $this->payments->saveFailedPayment(
+                paymobReference: $paymentReference,
+                booking: $booking,
+                amountCents: $amountCents,
+                payload: [
+                    'exception_class' => $exception::class,
+                    'message' => $exception->getMessage(),
+                ],
+            );
+
+            if (str_starts_with($exception->getMessage(), 'Paymob request failed')
+                || str_starts_with($exception->getMessage(), 'Paymob authentication failed')
+                || str_starts_with($exception->getMessage(), 'Could not connect to Paymob')) {
+                throw ValidationException::withMessages([
+                    'paymob' => ['Paymob returned an error while creating the payment.'],
+                ]);
+            }
+
+            throw ValidationException::withMessages([
+                'paymob' => ['Payment could not be started.'],
             ]);
         } catch (Throwable $exception) {
             Log::error('Local payment creation failed before Paymob completed', [

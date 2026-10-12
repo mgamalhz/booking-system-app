@@ -236,7 +236,7 @@ test('authenticated booking confirmation queues work and captures payment from a
 
         confirmBookingThroughHttp($customer, $booking)
             ->assertOk()
-            ->assertJsonPath('booking.status', 'confirmed')
+            ->assertJsonPath('booking.status', 'pending')
             ->assertJsonPath('payment.amount_cents', 25000)
             ->assertJsonPath('payment.paymob_order_id', 111222333)
             ->assertJsonPath('payment.payment_key', 'payment-token')
@@ -244,8 +244,8 @@ test('authenticated booking confirmation queues work and captures payment from a
 
         $booking->refresh();
 
-        $this->assertDatabaseHas('bookings', ['id' => $booking->id, 'status' => 'confirmed']);
-        expect($customer->notifications()->count())->toBe(1);
+        $this->assertDatabaseHas('bookings', ['id' => $booking->id, 'status' => 'pending']);
+        expect($customer->notifications()->count())->toBe(0);
 
         assertPaymobStartRequestsWereSent($booking);
 
@@ -278,7 +278,9 @@ test('authenticated booking confirmation queues work and captures payment from a
             'status' => 'captured',
         ]);
 
-        expect(Payment::query()->where('status', 'captured')->count())->toBe(1);
+        $this->assertDatabaseHas('bookings', ['id' => $booking->id, 'status' => 'confirmed']);
+        expect(Payment::query()->where('status', 'captured')->count())->toBe(1)
+            ->and($customer->notifications()->count())->toBe(1);
     } finally {
         DB::table('payments')->delete();
         DB::table('paymob_webhook_events')->delete();
@@ -305,7 +307,7 @@ test('gateway timeout while starting payment leaves a failed payment attempt and
         ->assertUnprocessable()
         ->assertJsonPath('error.details.fields.paymob.0', 'Paymob returned an error while creating the payment.');
 
-    $this->assertDatabaseHas('bookings', ['id' => $booking->id, 'status' => 'confirmed']);
+    $this->assertDatabaseHas('bookings', ['id' => $booking->id, 'status' => 'pending']);
     $this->assertDatabaseHas('payments', [
         'order_type' => Booking::class,
         'order_id' => (string) $booking->id,

@@ -62,6 +62,17 @@ class BookingController extends Controller
 
         $data = $request->validated();
 
+        if (($data['status'] ?? null) === 'confirmed' && $booking->status === 'pending') {
+            $payment = $bookingPaymentService->startPaymentForBooking($booking, (int) auth()->id());
+
+            return response()->json([
+                'success' => true,
+                'booking' => $booking->fresh(),
+                'payment' => $payment,
+                'message' => 'Booking payment started successfully',
+            ]);
+        }
+
         $booking = DB::transaction(function () use ($data, $booking, $bookingService) {
             $booking = $bookingService->updateExistingBooking($booking, $data);
 
@@ -73,10 +84,6 @@ class BookingController extends Controller
             'booking' => $booking,
             'message' => 'Booking updated successfully',
         ];
-
-        if (($validated['status'] ?? null) === 'confirmed' && $booking->status === 'confirmed') {
-            $response['payment'] = $bookingPaymentService->startPaymentForBooking($booking, (int) auth()->id());
-        }
 
         return response()->json($response);
     }
