@@ -69,7 +69,7 @@ class BookingController extends Controller
                 'success' => true,
                 'booking' => $booking->fresh(),
                 'payment' => $payment,
-                'message' => 'Payment started successfully',
+                'message' => 'Booking payment started successfully',
             ]);
         }
 
@@ -79,21 +79,23 @@ class BookingController extends Controller
             return $booking->fresh();
         });
 
-        return response()->json([
+        $response = [
             'success' => true,
             'booking' => $booking,
             'message' => 'Booking updated successfully',
-        ]);
+        ];
+
+        return response()->json($response);
     }
 
+    /**
+     * @param  LengthAwarePaginator<int, Booking>  $bookings
+     * @return array<string, mixed>
+     */
     private function indexPayload(LengthAwarePaginator $bookings): array
     {
         $data = [];
         foreach ($bookings->items() as $booking) {
-            if (! $booking instanceof Booking) {
-                continue;
-            }
-
             $data[] = [
                 'id' => $booking->id,
                 'status' => $booking->status,
@@ -129,14 +131,14 @@ class BookingController extends Controller
         ];
     }
 
+    /**
+     * @param  LengthAwarePaginator<int, Booking>  $bookings
+     * @return array<string, mixed>
+     */
     private function bottleneckIndexPayload(LengthAwarePaginator $bookings): array
     {
         $data = [];
         foreach ($bookings->items() as $booking) {
-            if (! $booking instanceof Booking) {
-                continue;
-            }
-
             $customer = $booking->customer()->first();
             $resource = $booking->resource()->first();
             $slot = $booking->slot()->first();

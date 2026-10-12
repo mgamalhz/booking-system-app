@@ -11,6 +11,9 @@ class AvailabilityRequest extends FormRequest
         return true;
     }
 
+    /**
+     * @return array<string, list<string>>
+     */
     public function rules(): array
     {
         return [
@@ -22,6 +25,9 @@ class AvailabilityRequest extends FormRequest
         ];
     }
 
+    /**
+     * @return array{starts_after?: string, ends_before?: string}
+     */
     public function filters(): array
     {
         return array_filter($this->safe()->only(['starts_after', 'ends_before']), fn ($value) => $value !== null);

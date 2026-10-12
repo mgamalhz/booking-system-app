@@ -43,7 +43,7 @@ class BookingQueryBuilder extends Builder
         ]);
     }
 
-    public function paginate($perPage = null, $columns = ['*'], $pageName = 'page', $page = null, $total = null): LengthAwarePaginator|AbstractPaginator
+    public function paginate($perPage = null, $columns = ['*'], $pageName = 'page', $page = null, mixed $total = null): LengthAwarePaginator|AbstractPaginator
     {
         return parent::paginate($perPage, $columns, $pageName, $page, $total)->appends(request()->query());
     }
