@@ -22,7 +22,7 @@ class ResourceFactory extends Factory
             'type' => $this->faker->randomElement(['room', 'table', 'chair', 'other']),
             'capacity' => $this->faker->numberBetween(1, 10),
             'price' => $this->faker->numberBetween(100, 1000),
-            'status' => $this->faker->randomElement(['active', 'inactive']),
+            'status' => 'active',
             'image' => $this->faker->imageUrl(),
 
         ];

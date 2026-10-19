@@ -4,45 +4,31 @@ namespace App\Strategies\BookingStrategies;
 
 use App\Exceptions\ApiConflictException;
 use App\Models\Booking;
-use App\Models\Slot;
-use Exception;
+use App\Models\Resource;
 
 class GroupBookingStrategy implements BookingStrategyInterface
 {
-    /** @retrun  Booking $booking */
     public function createBooking(array $data): Booking
     {
-        if (! isset($data['max_participants'])) {
-            throw new Exception('Max participants is required for group booking.');
+        $capacity = (int) Resource::query()->findOrFail($data['resource_id'])->capacity;
+        $active = Booking::query()->where('slot_id', $data['slot_id'])
+            ->whereIn('status', ['pending', 'confirmed']);
+        if ((clone $active)->count() >= $capacity) {
+            throw new ApiConflictException('Group booking is full.');
         }
-
-        $slot = Slot::findOrFail($data['slot_id']);
-
-        $status = $this->determineGroupBookingStatus($slot, $data);
+        if ((clone $active)->where(fn ($query) => $query->where('type', '!=', 'group')
+            ->orWhere('resource_id', '!=', $data['resource_id'])
+            ->orWhere('customer_id', $data['customer_id']))->exists()) {
+            throw new ApiConflictException('Slot is not available for this group booking.');
+        }
 
         return Booking::create([
             'customer_id' => $data['customer_id'],
             'resource_id' => $data['resource_id'],
             'slot_id' => $data['slot_id'],
             'type' => 'group',
-            'status' => $status,
-            'max_participants' => $data['max_participants'],
+            'status' => 'pending',
+            'max_participants' => $capacity,
         ]);
-    }
-
-    private function determineGroupBookingStatus(Slot $slot, array $data): string
-    {
-        $currentParticipants = Booking::where('slot_id', $slot->id)
-            ->where('type', 'group')
-            ->whereIn('status', ['pending', 'confirmed'])
-            ->count();
-
-        if ($currentParticipants >= $data['max_participants']) {
-            throw new ApiConflictException('Group booking is full.');
-        }
-
-        return $currentParticipants + 1 >= ($data['min_participants'] ?? 1)
-            ? 'confirmed'
-            : 'pending';
     }
 }

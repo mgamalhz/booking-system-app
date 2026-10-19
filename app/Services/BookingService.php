@@ -5,14 +5,16 @@ namespace App\Services;
 use App\Events\BookingCancelled;
 use App\Events\BookingCompleted;
 use App\Events\BookingConfirmed;
+use App\Exceptions\ApiConflictException;
 use App\Exceptions\InvalidBookingStatusTransition;
-use App\Jobs\SendBookingConfirmation;
 use App\Models\Booking;
+use App\Models\Resource;
 use App\Models\Slot;
 use App\Repositories\Interfaces\BookingRepositoryInterface;
 use App\Strategies\BookingStrategies\BookingStrategyResolver;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -42,14 +44,21 @@ class BookingService
                 // The row lock survives until the outer idempotency transaction commits.
                 // Cache lock release alone is earlier than that commit.
                 $booking = DB::transaction(function () use ($data) {
-                    Slot::query()->whereKey($data['slot_id'])->lockForUpdate()->firstOrFail();
+                    $slot = Slot::query()->whereKey($data['slot_id'])->lockForUpdate()->firstOrFail();
+                    $resource = Resource::query()->findOrFail($data['resource_id']);
+                    if ($slot->status !== 'active' || $resource->status !== 'active'
+                        || Carbon::parse($slot->date->toDateString().' '.$slot->start_time)->isPast()) {
+                        throw new ApiConflictException('The selected inventory is not available.');
+                    }
+                    if (($data['type'] ?? 'one-on-one') === 'recurring'
+                        && ($slot->date->toDateString() !== $data['start_date']
+                            || substr($slot->start_time, 0, 5) !== $data['start_time']
+                            || substr($slot->end_time, 0, 5) !== $data['end_time'])) {
+                        throw new ApiConflictException('Recurrence must start at the selected slot.');
+                    }
 
                     return $this->createBooking($data);
                 });
-                SendBookingConfirmation::dispatchIf(
-                    $booking->status === 'confirmed',
-                    $booking,
-                )->afterCommit();
 
                 return $booking;
             });
@@ -67,6 +76,15 @@ class BookingService
      */
     public function updateExistingBooking(Booking $booking, array $data): Booking
     {
+        return DB::transaction(function () use ($booking, $data) {
+            $locked = Booking::query()->without(['slot', 'resource', 'customer'])->whereKey($booking->id)->lockForUpdate()->firstOrFail();
+
+            return $this->applyUpdate($locked, $data);
+        });
+    }
+
+    private function applyUpdate(Booking $booking, array $data): Booking
+    {
         $fromStatus = (string) $booking->status;
         $toStatus = array_key_exists('status', $data) ? (string) $data['status'] : $fromStatus;
         $statusChanged = $fromStatus !== $toStatus;
@@ -76,10 +94,8 @@ class BookingService
             throw InvalidBookingStatusTransition::for($booking->id, $fromStatus, $toStatus);
         }
 
-        // Route model binding already loaded this row. Updating it directly avoids
-        // re-reading the booking and all three globally eager-loaded relations.
         $booking->update($data);
-        $updatedBooking = $booking->refresh()->loadMissing(['slot', 'resource', 'customer']);
+        $updatedBooking = $booking->loadMissing(['slot', 'resource', 'customer']);
 
         if (! $statusChanged) {
             return $updatedBooking;

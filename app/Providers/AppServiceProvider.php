@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Events\BookingCancelled;
 use App\Events\BookingCompleted;
 use App\Events\BookingConfirmed;
+use App\Http\Controllers\Api\BookingPaymentWebhookController;
 use App\Listeners\BookingConfirmationNotificationListener;
 use App\Listeners\InvalidateBookingAvailabilityCache;
 use App\Listeners\LogConfirmedBooking;
@@ -35,6 +36,7 @@ use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
+use Paymob\Laravel\PayMobWebHockController;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -45,6 +47,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        App::bind(PayMobWebHockController::class, BookingPaymentWebhookController::class);
         App::bind(BookingRepositoryInterface::class, BookingRepository::class);
         App::bind(BookingCancellationRepositoryInterface::class, BookingRepository::class);
         App::bind(BookingDocumentRepositoryInterface::class, BookingDocumentRepository::class);

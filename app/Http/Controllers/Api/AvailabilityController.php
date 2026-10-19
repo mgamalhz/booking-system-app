@@ -16,6 +16,7 @@ class AvailabilityController extends Controller
         SlotAvailabilityService $availability,
     ): JsonResponse {
         return response()->json([
+            'success' => true,
             'data' => $availability->forResource(
                 $resource,
                 $request->string('start_date')->toString(),

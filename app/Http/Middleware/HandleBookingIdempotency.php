@@ -74,7 +74,11 @@ class HandleBookingIdempotency
                     ->where('customer_id', $customerId)
                     ->where('idempotency_key', $header)
                     ->lockForUpdate()
-                    ->firstOrFail();
+                    ->first();
+
+                if ($idempotencyKey === null) {
+                    throw new ApiConflictException('The selected slot is no longer available.');
+                }
 
                 return $this->replayStoredResponse($idempotencyKey, $payloadHash);
             });

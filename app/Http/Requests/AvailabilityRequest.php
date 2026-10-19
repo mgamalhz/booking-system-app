@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class AvailabilityRequest extends FormRequest
 {
@@ -23,6 +24,7 @@ class AvailabilityRequest extends FormRequest
                 }
             }],
             'timezone' => ['required', 'timezone:all'],
+            'type' => ['sometimes', Rule::in(['one-on-one', 'group'])],
             'starts_after' => ['sometimes', 'date_format:H:i'],
             'ends_before' => ['sometimes', 'date_format:H:i'],
         ];
@@ -30,6 +32,6 @@ class AvailabilityRequest extends FormRequest
 
     public function filters(): array
     {
-        return array_filter($this->safe()->only(['starts_after', 'ends_before']), fn ($value) => $value !== null);
+        return array_filter($this->safe()->only(['starts_after', 'ends_before', 'type']), fn ($value) => $value !== null);
     }
 }
