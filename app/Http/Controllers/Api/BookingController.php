@@ -23,11 +23,11 @@ class BookingController extends Controller
 
         if ($request->boolean('profile_bottleneck') && app()->environment(['local', 'testing'])) {
             return response()->json($this->bottleneckIndexPayload(
-                $bookingService->getBottleneckBookingIndex($perPage)
+                $bookingService->getBottleneckBookingIndex($perPage, (int) $request->user()->id)
             ));
         }
 
-        return response()->json($this->indexPayload($bookingService->getBookingIndex($perPage)));
+        return response()->json($this->indexPayload($bookingService->getBookingIndex($perPage, (int) $request->user()->id)));
     }
 
     public function store(StoreBookingRequest $request, BookingService $bookingService): JsonResponse

@@ -8,12 +8,14 @@ use App\Events\BookingConfirmed;
 use App\Exceptions\InvalidBookingStatusTransition;
 use App\Jobs\SendBookingConfirmation;
 use App\Models\Booking;
+use App\Models\Slot;
 use App\Repositories\Interfaces\BookingRepositoryInterface;
 use App\Strategies\BookingStrategies\BookingStrategyResolver;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class BookingService
 {
@@ -37,7 +39,13 @@ class BookingService
 
         return Cache::lock("slot:{$data['slot_id']}:book", $ttl)
             ->block($waitSeconds, function () use ($data) {
-                $booking = $this->createBooking($data);
+                // The row lock survives until the outer idempotency transaction commits.
+                // Cache lock release alone is earlier than that commit.
+                $booking = DB::transaction(function () use ($data) {
+                    Slot::query()->whereKey($data['slot_id'])->lockForUpdate()->firstOrFail();
+
+                    return $this->createBooking($data);
+                });
                 SendBookingConfirmation::dispatchIf(
                     $booking->status === 'confirmed',
                     $booking,
@@ -72,6 +80,10 @@ class BookingService
         // re-reading the booking and all three globally eager-loaded relations.
         $booking->update($data);
         $updatedBooking = $booking->refresh()->loadMissing(['slot', 'resource', 'customer']);
+
+        if (! $statusChanged) {
+            return $updatedBooking;
+        }
 
         match ($toStatus) {
             'confirmed' => BookingConfirmed::dispatch(
@@ -135,14 +147,14 @@ class BookingService
         return $this->bookingRepository->all();
     }
 
-    public function getBookingIndex(int $perPage): LengthAwarePaginator
+    public function getBookingIndex(int $perPage, ?int $customerId = null): LengthAwarePaginator
     {
-        return $this->bookingRepository->indexPage($perPage);
+        return $this->bookingRepository->indexPage($perPage, $customerId);
     }
 
-    public function getBottleneckBookingIndex(int $perPage): LengthAwarePaginator
+    public function getBottleneckBookingIndex(int $perPage, ?int $customerId = null): LengthAwarePaginator
     {
-        return $this->bookingRepository->bottleneckIndexPage($perPage);
+        return $this->bookingRepository->bottleneckIndexPage($perPage, $customerId);
     }
 
     public function getBookingById(int $id): Booking

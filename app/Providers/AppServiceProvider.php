@@ -2,9 +2,13 @@
 
 namespace App\Providers;
 
+use App\Events\BookingCancelled;
+use App\Events\BookingCompleted;
 use App\Events\BookingConfirmed;
 use App\Listeners\BookingConfirmationNotificationListener;
+use App\Listeners\InvalidateBookingAvailabilityCache;
 use App\Listeners\LogConfirmedBooking;
+use App\Listeners\RecordBookingStatusEvent;
 use App\Listeners\SendFailedJobAlert;
 use App\Models\Booking;
 use App\Models\Resource;
@@ -27,8 +31,6 @@ use App\Services\Contracts\AvailabilityCacheInterface;
 use App\Services\Contracts\FilesUploadServiceInterface;
 use App\Services\RedisAvailabilityCache;
 use App\Services\S3FilesUploadService;
-use App\Strategies\BookingStrategies\BookingStrategyInterface;
-use App\Strategies\BookingStrategies\BookingStrategyResolver;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Event;
@@ -49,7 +51,6 @@ class AppServiceProvider extends ServiceProvider
         App::bind(CustomerRepositoryInterface::class, CustomerRepository::class);
         App::bind(PaymentRepositoryInterface::class, PaymentRepository::class);
         App::bind(SlotAvailabilityRepositoryInterface::class, SlotAvailabilityRepository::class);
-        App::bind(BookingStrategyInterface::class, BookingStrategyResolver::class);
         App::bind(FilesUploadServiceInterface::class, S3FilesUploadService::class);
         App::bind(AvailabilityCacheInterface::class, RedisAvailabilityCache::class);
     }
@@ -63,7 +64,11 @@ class AppServiceProvider extends ServiceProvider
         Resource::observe(ResourceAvailabilityObserver::class);
         Slot::observe(SlotScheduleObserver::class);
         Event::listen(BookingConfirmed::class, [BookingConfirmationNotificationListener::class, 'handle']);
-        Event::listen(BookingConfirmed::class, [LogConfirmedBooking::class, 'handle']);
+        foreach ([BookingConfirmed::class, BookingCancelled::class, BookingCompleted::class] as $event) {
+            Event::listen($event, [RecordBookingStatusEvent::class, 'handle']);
+            Event::listen($event, [InvalidateBookingAvailabilityCache::class, 'handle']);
+            Event::listen($event, [LogConfirmedBooking::class, 'handle']);
+        }
         Event::listen(JobFailed::class, [SendFailedJobAlert::class, 'handle']);
     }
 }

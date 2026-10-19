@@ -36,7 +36,7 @@ test('it requires an idempotency key to create a booking', function () {
         ))
         ->assertStatus(400)
         ->assertJson([
-            'message' => 'The Idempotency-Key header is required.',
+            'error' => ['status' => 400],
         ]);
 
     expect(Booking::query()->count())->toBe(0);
@@ -80,7 +80,7 @@ test('the same idempotency key with a different payload returns unprocessable wi
         ->postJson(route('bookings.store'), $changedPayload, ['Idempotency-Key' => 'changed-payload'])
         ->assertUnprocessable()
         ->assertJson([
-            'message' => 'The Idempotency-Key header was already used with a different payload.',
+            'error' => ['code' => 'validation_failed'],
         ]);
 
     expect(Booking::query()->count())->toBe(1)

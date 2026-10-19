@@ -7,15 +7,10 @@ use App\Http\Controllers\Api\BookingPaymentController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\S3UploadController;
 use App\Http\Middleware\HandleBookingIdempotency;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/test', function (Request $request) {
-    return response()->json(['message' => 'test']);
-});
-
-Route::post('register', [AuthController::class, 'register'])->name('auth.register');
-Route::post('login', [AuthController::class, 'login'])->name('auth.login');
+Route::post('register', [AuthController::class, 'register'])->middleware('throttle:6,1')->name('auth.register');
+Route::post('login', [AuthController::class, 'login'])->middleware('throttle:6,1')->name('auth.login');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('resources/{resource}/availability', AvailabilityController::class)->name('resources.availability');
