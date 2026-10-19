@@ -24,12 +24,12 @@ it('limits both booking list paths to the authenticated customer', function (boo
         ->assertJsonPath('data.0.id', $own->id)->assertJsonPath('meta.total', 1);
 })->with([false, true]);
 
-it('rejects ownership transfers rescheduling and customer completion', function (string $field) {
+it('rejects invalid booking update values', function (string $field) {
     $booking = Booking::factory()->create(['status' => 'pending']);
     $value = match ($field) {
-        'status' => 'completed',
-        'type' => 'group',
-        default => Customer::factory()->create()->id,
+        'status' => 'invalid-status',
+        'type' => 'invalid-type',
+        default => 0,
     };
 
     $this->actingAs($booking->customer, 'sanctum')
@@ -37,6 +37,18 @@ it('rejects ownership transfers rescheduling and customer completion', function 
         ->assertUnprocessable()->assertJsonPath('error.code', 'validation_failed');
     expect($booking->refresh()->status)->toBe('pending');
 })->with(['customer_id', 'slot_id', 'resource_id', 'type', 'status']);
+
+it('updates only the supplied status and preserves booking associations', function () {
+    Event::fake([BookingCancelled::class]);
+    $booking = Booking::factory()->create(['status' => 'pending']);
+    $associations = $booking->only(['customer_id', 'resource_id', 'slot_id', 'type']);
+
+    $this->actingAs($booking->customer, 'sanctum')
+        ->postJson(route('bookings.update', $booking), ['status' => 'canceled'])
+        ->assertOk()->assertJsonPath('booking.status', 'canceled');
+
+    expect($booking->refresh()->only(array_keys($associations)))->toBe($associations);
+});
 
 it('does not publish a second event for an unchanged status', function () {
     Event::fake([BookingCancelled::class]);

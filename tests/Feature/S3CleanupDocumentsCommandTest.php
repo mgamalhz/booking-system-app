@@ -17,7 +17,7 @@ beforeEach(function () {
 });
 
 test('it removes orphaned and expired soft deleted booking document objects only', function () {
-    Storage::fake('documents');
+    $this->fakeDocumentsDisk();
 
     $booking = Booking::factory()->create();
 
@@ -68,7 +68,7 @@ test('it removes orphaned and expired soft deleted booking document objects only
 });
 
 test('it is idempotent when a deletable object is already missing', function () {
-    Storage::fake('documents');
+    $this->fakeDocumentsDisk();
 
     $booking = Booking::factory()->create();
     $missingKey = "bookings/{$booking->id}/documents/already-gone.pdf";
@@ -92,7 +92,7 @@ test('it does not remove orphaned document objects inside the grace window', fun
         'filesystems.disks.documents.orphan_cleanup_grace_minutes' => 15,
     ]);
 
-    Storage::fake('documents');
+    $this->fakeDocumentsDisk();
 
     $booking = Booking::factory()->create();
     $recentOrphanedKey = "bookings/{$booking->id}/documents/recent-orphaned.pdf";

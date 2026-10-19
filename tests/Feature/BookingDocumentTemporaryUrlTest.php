@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Storage;
 uses(RefreshDatabase::class);
 
 test('authorized user receives a temporary document url', function () {
-    Storage::fake('documents');
+    $this->fakeDocumentsDisk();
 
     $customer = Customer::factory()->create();
     $booking = Booking::factory()->create([
@@ -34,7 +34,7 @@ test('authorized user receives a temporary document url', function () {
 });
 
 test('unauthorized user is refused before a temporary document url is generated', function () {
-    Storage::fake('documents');
+    $this->fakeDocumentsDisk();
     Storage::disk('documents')->buildTemporaryUrlsUsing(function () {
         throw new RuntimeException('Temporary URL should not be generated for unauthorized users.');
     });
@@ -59,7 +59,7 @@ test('unauthorized user is refused before a temporary document url is generated'
 });
 
 test('user with the same email as the customer cannot receive a temporary document url', function () {
-    Storage::fake('documents');
+    $this->fakeDocumentsDisk();
     Storage::disk('documents')->buildTemporaryUrlsUsing(function () {
         throw new RuntimeException('Temporary URL should not be generated for unauthorized users.');
     });

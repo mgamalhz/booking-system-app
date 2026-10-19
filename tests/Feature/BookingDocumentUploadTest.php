@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Storage;
 uses(RefreshDatabase::class);
 
 test('it stores an uploaded booking document and writes the database row', function () {
-    Storage::fake('documents');
+    $this->fakeDocumentsDisk();
 
     $customer = Customer::factory()->create();
     $booking = Booking::factory()->create([
@@ -40,7 +40,7 @@ test('it stores an uploaded booking document and writes the database row', funct
 });
 
 test('it rejects unsupported document file types', function () {
-    Storage::fake('documents');
+    $this->fakeDocumentsDisk();
 
     $customer = Customer::factory()->create();
     $booking = Booking::factory()->create([
@@ -60,7 +60,7 @@ test('it rejects unsupported document file types', function () {
 });
 
 test('it rejects document uploads for bookings owned by another user', function () {
-    Storage::fake('documents');
+    $this->fakeDocumentsDisk();
 
     $booking = Booking::factory()->create([
         'customer_id' => Customer::factory()->create()->id,
