@@ -2,11 +2,13 @@
 
 namespace App\Services;
 
+use App\Exceptions\ApiConflictException;
 use App\Models\Booking;
 use App\Repositories\Interfaces\BookingRepositoryInterface;
 use App\Repositories\Interfaces\PaymentRepositoryInterface;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -15,7 +17,7 @@ use Paymob\Laravel\DTO\BillingDataDto;
 use Paymob\Laravel\DTO\OrderItemDto;
 use Paymob\Laravel\DTO\RegisterOrderData;
 use Paymob\Laravel\DTO\RequestPaymentKeyData;
-use RuntimeException;
+use Paymob\Laravel\Models\Payment;
 use Throwable;
 
 class BookingPaymentService
@@ -49,13 +51,33 @@ class BookingPaymentService
      */
     public function startPaymentForBooking(Booking $booking, int $customerId): array
     {
+        abort_unless((int) $booking->customer_id === $customerId, 403);
+
+        return Cache::lock('booking:'.$booking->id.':payment', 150)->block(2, function () use ($booking) {
+            return $this->createPayment($booking->refresh());
+        });
+    }
+
+    private function createPayment(Booking $booking): array
+    {
+        if ($booking->status !== 'pending') {
+            throw new ApiConflictException('Only pending bookings can be paid.');
+        }
         if ($this->payments->hasCapturedPaymentForBooking($booking)) {
             throw ValidationException::withMessages([
                 'booking' => ['Booking is already paid.'],
             ]);
         }
 
+        if (Payment::query()->where('order_type', Booking::class)
+            ->where('order_id', (string) $booking->id)->where('status', 'processing')->exists()) {
+            throw new ApiConflictException('A payment is already processing for this booking.');
+        }
+
         $amountCents = $this->amountCents($booking);
+        if ($amountCents <= 0) {
+            throw ValidationException::withMessages(['booking' => ['The resource must have a positive price.']]);
+        }
         $billingData = $this->billingData($booking);
         $integrationId = (int) config('paymob.integration_id');
         $paymentReference = 'booking-'.$booking->id.'-'.Str::uuid();

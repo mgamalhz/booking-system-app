@@ -7,7 +7,7 @@ The application uses the database queue driver:
 ```env
 QUEUE_CONNECTION=database
 QUEUE_FAILED_DRIVER=database-uuids
-DB_QUEUE_RETRY_AFTER=90
+DB_QUEUE_RETRY_AFTER=180
 FAILED_JOB_ALERT_MAIL_TO=ops@example.com
 ```
 
@@ -28,7 +28,7 @@ php artisan migrate
 Use bounded global defaults for jobs that do not define their own retry policy:
 
 ```bash
-php artisan queue:work --tries=3 --backoff=10
+php artisan queue:work --queue=bookings,default --timeout=130 --tries=3 --backoff=10
 ```
 
 The local `composer dev` queue worker uses the same defaults.

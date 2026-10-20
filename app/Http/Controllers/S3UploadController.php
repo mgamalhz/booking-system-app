@@ -14,6 +14,7 @@ class S3UploadController extends Controller
         abort_if((int) $booking->customer_id !== (int) auth()->id(), 403);
 
         return response()->json([
+            'success' => true,
             'document' => $filesUploadService->uploadBookingDocument($booking, $request->file('attachment')),
         ], 201);
     }

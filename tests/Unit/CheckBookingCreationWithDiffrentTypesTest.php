@@ -40,6 +40,7 @@ test('it creates a pending group booking until the minimum participants count is
         'max_participants' => 3,
     ]);
 
+    Resource::query()->findOrFail($data['resource_id'])->update(['capacity' => 3]);
     $booking = BookingStrategyResolver::resolve('group')->createBooking($data);
 
     expect($booking)
@@ -55,10 +56,10 @@ test('it creates a pending group booking until the minimum participants count is
     ]);
 });
 
-test('it confirms a group booking when the minimum participants count is reached', function () {
+test('it keeps group bookings pending until payment even when minimum participants is reached', function () {
     $slot = Slot::factory()->create();
 
-    Booking::factory()->create([
+    $existing = Booking::factory()->create([
         'type' => 'group',
         'slot_id' => $slot->id,
         'status' => 'pending',
@@ -69,15 +70,16 @@ test('it confirms a group booking when the minimum participants count is reached
         'max_participants' => 3,
     ]);
 
+    $data['resource_id'] = $existing->resource_id;
     $booking = BookingStrategyResolver::resolve('group')->createBooking($data);
 
-    expect($booking->status)->toBe('confirmed');
+    expect($booking->status)->toBe('pending');
 });
 
 test('it rejects a group booking when the group is full', function () {
     $slot = Slot::factory()->create();
 
-    Booking::factory()->create([
+    $existing = Booking::factory()->create([
         'type' => 'group',
         'slot_id' => $slot->id,
         'status' => 'confirmed',
@@ -87,6 +89,8 @@ test('it rejects a group booking when the group is full', function () {
         'max_participants' => 1,
     ]);
 
+    $data['resource_id'] = $existing->resource_id;
+    $existing->resource->update(['capacity' => 1]);
     expect(fn () => BookingStrategyResolver::resolve('group')->createBooking($data))
         ->toThrow(Exception::class, 'Group booking is full.');
 });
@@ -102,12 +106,15 @@ test('it creates recurring bookings for every date in the recurrence range', fun
         'resource_id' => Resource::factory()->create()->id,
     ];
 
+    foreach (['2026-07-01', '2026-07-08', '2026-07-15'] as $date) {
+        Slot::factory()->create(['date' => $date, 'start_time' => '13:00:00', 'end_time' => '14:00:00']);
+    }
     $booking = BookingStrategyResolver::resolve('recurring')->createBooking($data);
 
     expect($booking)
         ->toBeInstanceOf(Booking::class)
         ->type->toBe('recurring')
-        ->status->toBe('confirmed')
+        ->status->toBe('pending')
         ->and(Booking::query()->where('type', 'recurring')->count())->toBe(3)
         ->and(Slot::query()
             ->whereDate('date', '2026-07-01')
@@ -120,6 +127,7 @@ test('it creates recurring bookings for every date in the recurrence range', fun
 test('it rolls back recurring booking creation when one generated slot is already booked', function () {
     $customer = Customer::factory()->create();
     $resource = Resource::factory()->create();
+    Slot::factory()->create(['date' => '2026-07-01', 'start_time' => '13:00:00', 'end_time' => '14:00:00']);
     $conflictingSlot = Slot::factory()->create([
         'date' => '2026-07-08',
         'start_time' => '13:00:00',

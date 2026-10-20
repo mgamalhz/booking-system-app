@@ -12,6 +12,7 @@ trait ReturnsApiResponses
     protected function successResponse(array $data, int $status = 200): JsonResponse
     {
         return response()->json([
+            'success' => true,
             'data' => $data,
         ], $status);
     }

@@ -58,7 +58,20 @@ jobs:
         run: composer install --no-interaction --prefer-dist
 
       - name: Run PHPStan
-        run:  vendor/bin/phpstan analyse
+        run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+
+      - name: Audit dependencies
+        run: composer audit --locked
+
+  frontend-audit:
+    name: Frontend Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm audit
 
   tests:
     name: Tests (PHPUnit)
@@ -105,7 +118,7 @@ jobs:
   deploy-staging:
     name: Deploy Staging
     runs-on: ubuntu-latest
-    needs: [style, analyse, tests]
+    needs: [style, analyse, frontend-audit, tests]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.STAGING_DEPLOY_ENABLED == 'true'
     environment:
       name: staging

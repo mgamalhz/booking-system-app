@@ -5,6 +5,9 @@ namespace App\Providers;
 use App\Events\BookingCancelled;
 use App\Events\BookingCompleted;
 use App\Events\BookingConfirmed;
+use App\Http\Controllers\Api\BookingPaymentWebhookController;
+use App\Listeners\BookingConfirmationNotificationListener;
+use App\Listeners\InvalidateBookingAvailabilityCache;
 use App\Listeners\LogConfirmedBooking;
 use App\Listeners\RecordBookingStatusEvent;
 use App\Listeners\SendFailedJobAlert;
@@ -29,12 +32,11 @@ use App\Services\Contracts\AvailabilityCacheInterface;
 use App\Services\Contracts\FilesUploadServiceInterface;
 use App\Services\RedisAvailabilityCache;
 use App\Services\S3FilesUploadService;
-use App\Strategies\BookingStrategies\BookingStrategyInterface;
-use App\Strategies\BookingStrategies\BookingStrategyResolver;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
+use Paymob\Laravel\PayMobWebHockController;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -45,13 +47,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        App::bind(PayMobWebHockController::class, BookingPaymentWebhookController::class);
         App::bind(BookingRepositoryInterface::class, BookingRepository::class);
         App::bind(BookingCancellationRepositoryInterface::class, BookingRepository::class);
         App::bind(BookingDocumentRepositoryInterface::class, BookingDocumentRepository::class);
         App::bind(CustomerRepositoryInterface::class, CustomerRepository::class);
         App::bind(PaymentRepositoryInterface::class, PaymentRepository::class);
         App::bind(SlotAvailabilityRepositoryInterface::class, SlotAvailabilityRepository::class);
-        App::bind(BookingStrategyInterface::class, BookingStrategyResolver::class);
         App::bind(FilesUploadServiceInterface::class, S3FilesUploadService::class);
         App::bind(AvailabilityCacheInterface::class, RedisAvailabilityCache::class);
     }
@@ -69,6 +71,12 @@ class AppServiceProvider extends ServiceProvider
         Booking::observe(BookingAvailabilityObserver::class);
         Resource::observe(ResourceAvailabilityObserver::class);
         Slot::observe(SlotScheduleObserver::class);
+        Event::listen(BookingConfirmed::class, [BookingConfirmationNotificationListener::class, 'handle']);
+        foreach ([BookingConfirmed::class, BookingCancelled::class, BookingCompleted::class] as $event) {
+            Event::listen($event, [RecordBookingStatusEvent::class, 'handle']);
+            Event::listen($event, [InvalidateBookingAvailabilityCache::class, 'handle']);
+            Event::listen($event, [LogConfirmedBooking::class, 'handle']);
+        }
         Event::listen(JobFailed::class, [SendFailedJobAlert::class, 'handle']);
     }
 }

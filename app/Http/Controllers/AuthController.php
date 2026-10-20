@@ -15,6 +15,7 @@ class AuthController extends Controller
 
         return response()->json([
             'customer' => $auth['customer'],
+            'success' => true,
             'token' => $auth['token'],
         ], 201);
     }
@@ -25,6 +26,7 @@ class AuthController extends Controller
 
         return response()->json([
             'customer' => $auth['customer'],
+            'success' => true,
             'token' => $auth['token'],
         ]);
     }

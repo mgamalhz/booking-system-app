@@ -10,7 +10,7 @@ class BookingAvailabilityObserver implements ShouldHandleEventsAfterCommit
 {
     public function created(Booking $booking): void
     {
-        app(AvailabilityCacheInvalidator::class)->resource($booking->resource_id, 'booking_created');
+        app(AvailabilityCacheInvalidator::class)->schedule('booking_created');
     }
 
     public function updated(Booking $booking): void
@@ -19,19 +19,16 @@ class BookingAvailabilityObserver implements ShouldHandleEventsAfterCommit
             return;
         }
 
-        $resourceIds = array_unique([(int) $booking->resource_id, (int) $booking->getOriginal('resource_id')]);
-        foreach ($resourceIds as $resourceId) {
-            app(AvailabilityCacheInvalidator::class)->resource($resourceId, 'booking_updated');
-        }
+        app(AvailabilityCacheInvalidator::class)->schedule('booking_updated');
     }
 
     public function deleted(Booking $booking): void
     {
-        app(AvailabilityCacheInvalidator::class)->resource($booking->resource_id, 'booking_deleted');
+        app(AvailabilityCacheInvalidator::class)->schedule('booking_deleted');
     }
 
     public function restored(Booking $booking): void
     {
-        app(AvailabilityCacheInvalidator::class)->resource($booking->resource_id, 'booking_restored');
+        app(AvailabilityCacheInvalidator::class)->schedule('booking_restored');
     }
 }

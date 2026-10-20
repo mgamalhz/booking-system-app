@@ -67,7 +67,7 @@ class PaymentRepository implements PaymentRepositoryInterface
      */
     private function payloadWithoutPaymentKey(array $payload): array
     {
-        unset($payload['payment_key']);
+        unset($payload['payment_key'], $payload['redirect_url']);
 
         return $payload;
     }

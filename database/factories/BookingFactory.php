@@ -22,9 +22,9 @@ class BookingFactory extends Factory
     {
         return [
             'status' => 'pending',
-            'customer_id' => Customer::factory(1)->create()->pluck('id')->first(),
-            'resource_id' => Resource::factory(1)->create()->pluck('id')->first(),
-            'slot_id' => Slot::factory(1)->create()->pluck('id')->first(),
+            'customer_id' => Customer::factory(),
+            'resource_id' => Resource::factory(),
+            'slot_id' => Slot::factory(),
         ];
     }
 }

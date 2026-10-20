@@ -3,8 +3,10 @@
 namespace App\Support;
 
 use App\Exceptions\ApiConflictException;
+use App\Exceptions\InvalidBookingStatusTransition;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\JsonResponse;
@@ -74,6 +76,8 @@ final class ApiErrorResponse
             $exception instanceof AuthorizationException => [403, 'forbidden', 'You are not allowed to perform this action.', []],
             $exception instanceof ModelNotFoundException,
             $exception instanceof NotFoundHttpException => [404, 'not_found', 'The requested resource was not found.', []],
+            $exception instanceof LockTimeoutException => [409, 'conflict', 'The booking is being changed. Please retry shortly.', []],
+            $exception instanceof InvalidBookingStatusTransition => [409, 'conflict', 'The requested booking status transition is not allowed.', []],
             $exception instanceof ApiConflictException => [409, 'conflict', $exception->publicMessage(), []],
             $exception instanceof ThrottleRequestsException => [429, 'too_many_requests', 'Too many requests. Please try again later.', []],
             $exception instanceof HttpExceptionInterface => self::mapHttpException($exception),

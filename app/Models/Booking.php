@@ -3,7 +3,8 @@
 namespace App\Models;
 
 use App\Builders\BookingQueryBuilder;
-use App\Jobs\SendBookingConfirmation;
+use App\Exceptions\ApiConflictException;
+use App\Services\BookingService;
 use App\ValueObjects\SlotDuration;
 use Database\Factories\BookingFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 use Paymob\Laravel\Contracts\PaymobCapturable;
 use Paymob\Laravel\DTO\CapturePaymentResponseDto;
 use Paymob\Laravel\Models\Payment;
@@ -115,10 +117,13 @@ class Booking extends Model implements PaymobCapturable
 
     public function markPaymobCaptured(CapturePaymentResponseDto $response): void
     {
-        $this->forceFill([
-            'status' => 'confirmed',
-        ])->save();
-
-        SendBookingConfirmation::dispatch($this->refresh())->afterCommit();
+        if (($response->payload['success'] ?? false) !== true) {
+            throw new ApiConflictException('Payment capture was not successful.');
+        }
+        DB::transaction(function (): void {
+            $booking = self::query()->whereKey($this->id)->lockForUpdate()->firstOrFail();
+            app(BookingService::class)->transitionStatus($booking, 'confirmed');
+        });
+        $this->refresh();
     }
 }

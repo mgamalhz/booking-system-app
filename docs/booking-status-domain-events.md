@@ -41,10 +41,10 @@ Synchronous listeners:
 
 Queued listeners:
 
-- `BookingConfirmationNotificationListener`: sends the confirmation notification and can tolerate delay.
+- `BookingConfirmationNotificationListener` is now a synchronous after-commit dispatcher for `SendBookingConfirmation` on the `bookings` queue. The job sends the notification; there is one notification path for captures and service transitions.
 - `LogConfirmedBooking`: writes an audit log entry and can tolerate delay.
 
-`BookingService` no longer references notification, audit logging, or cache invalidation consequences.
+`BookingService` transitions re-read the booking under a row lock. Verified payment capture uses the same transition service; no-op callbacks publish no second event. The application capture job stores the payment result in the same transaction as the transition.
 
 ## Database
 
