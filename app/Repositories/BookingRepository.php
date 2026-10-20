@@ -44,6 +44,9 @@ class BookingRepository implements BookingCancellationRepositoryInterface, Booki
         return Booking::query()->paginate();
     }
 
+    /**
+     * @return LengthAwarePaginator<int, Booking>
+     */
     public function indexPage(int $perPage, ?int $customerId = null): LengthAwarePaginator
     {
         return Booking::query()
@@ -59,6 +62,9 @@ class BookingRepository implements BookingCancellationRepositoryInterface, Booki
             ->paginate($perPage);
     }
 
+    /**
+     * @return LengthAwarePaginator<int, Booking>
+     */
     public function bottleneckIndexPage(int $perPage, ?int $customerId = null): LengthAwarePaginator
     {
         return Booking::query()

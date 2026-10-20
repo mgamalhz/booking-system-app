@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\CaptureBookingPayment;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Resource;
@@ -13,7 +14,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Paymob\Laravel\Contracts\PaymobClientContract;
-use Paymob\Laravel\Jobs\ProcessPaymobPayment;
 use Paymob\Laravel\Models\Payment;
 use Paymob\Laravel\Models\PaymobWebhookEvent;
 
@@ -116,7 +116,12 @@ function createPaymobBookingThroughHttp(Customer $customer, Resource $resource, 
 
 function processPaymobCapture(Booking $booking, int $transactionId = 987654321, int $amountCents = 25000): void
 {
-    (new ProcessPaymobPayment($booking, $transactionId, $amountCents))
+    $payment = Payment::query()->where('order_type', Booking::class)
+        ->where('order_id', (string) $booking->id)->firstOrFail();
+
+    expect((int) $payment->amount_cents)->toBe($amountCents);
+
+    (new CaptureBookingPayment($payment->id, $transactionId))
         ->handle(app(PaymobClientContract::class));
 }
 
@@ -270,7 +275,7 @@ test('authenticated booking confirmation queues work and captures payment from a
             && $request['amount_cents'] === 25000);
 
         $this->assertDatabaseHas('payments', [
-            'paymob_reference' => '987654321',
+            'paymob_reference' => '111222333',
             'transaction_id' => 987654321,
             'order_type' => Booking::class,
             'order_id' => (string) $booking->id,
@@ -335,13 +340,13 @@ test('invalid Paymob webhook signature is rejected without a capture', function 
     $payload = signedPaymobWebhookPayload();
     $payload['hmac'] = str_repeat('0', 128);
 
-    Queue::fake([ProcessPaymobPayment::class]);
+    Queue::fake([CaptureBookingPayment::class]);
 
     $this->postJson('/paymob/webhook', $payload)->assertForbidden();
 
     expect(PaymobWebhookEvent::query()->count())->toBe(0)
         ->and(Payment::query()->where('status', 'captured')->count())->toBe(0);
-    Queue::assertNotPushed(ProcessPaymobPayment::class);
+    Queue::assertNotPushed(CaptureBookingPayment::class);
 
     Http::assertNotSent(fn (Request $request): bool => $request->url() === paymobBaseUrl().'/api/acceptance/capture?token=auth-token');
 });
@@ -358,20 +363,21 @@ test('duplicate Paymob webhook delivery records one event and captures one charg
 
     $payload = signedPaymobWebhookPayload();
 
-    Queue::fake([ProcessPaymobPayment::class]);
+    Bus::fake([CaptureBookingPayment::class]);
 
     $this->postJson('/paymob/webhook', $payload)
         ->assertOk()
         ->assertJson(['message' => 'Webhook received.']);
     $this->postJson('/paymob/webhook', $payload)
         ->assertOk()
-        ->assertJson(['message' => 'Webhook already processed.']);
+        ->assertJson(['message' => 'Webhook received.']);
 
     expect(PaymobWebhookEvent::query()->where('transaction_id', 987654321)->count())->toBe(1)
         ->and(Payment::query()->where('status', 'captured')->count())->toBe(0);
 
-    Queue::assertPushed(ProcessPaymobPayment::class, 1);
+    Bus::assertDispatched(CaptureBookingPayment::class, 2);
 
+    processPaymobCapture($booking);
     processPaymobCapture($booking);
 
     expect(Payment::query()->where('status', 'captured')->count())->toBe(1);
@@ -404,13 +410,13 @@ test('competing bookings for one slot leave one confirmed booking, one rejection
 
     confirmBookingThroughHttp($customer, $booking)->assertOk();
 
-    Bus::fake([ProcessPaymobPayment::class]);
+    Bus::fake([CaptureBookingPayment::class]);
 
     $this->postJson('/paymob/webhook', signedPaymobWebhookPayload())
         ->assertOk()
         ->assertJson(['message' => 'Webhook received.']);
 
-    Bus::assertDispatched(ProcessPaymobPayment::class, 1);
+    Bus::assertDispatched(CaptureBookingPayment::class, 1);
 
     processPaymobCapture($booking);
 

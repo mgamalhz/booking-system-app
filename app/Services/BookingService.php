@@ -93,6 +93,9 @@ class BookingService
         });
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     private function applyUpdate(Booking $booking, array $data): Booking
     {
         $fromStatus = (string) $booking->status;
@@ -176,11 +179,17 @@ class BookingService
         return $this->bookingRepository->all();
     }
 
+    /**
+     * @return LengthAwarePaginator<int, Booking>
+     */
     public function getBookingIndex(int $perPage, ?int $customerId = null): LengthAwarePaginator
     {
         return $this->bookingRepository->indexPage($perPage, $customerId);
     }
 
+    /**
+     * @return LengthAwarePaginator<int, Booking>
+     */
     public function getBottleneckBookingIndex(int $perPage, ?int $customerId = null): LengthAwarePaginator
     {
         return $this->bookingRepository->bottleneckIndexPage($perPage, $customerId);

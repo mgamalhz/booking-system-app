@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\In;
 
 class AvailabilityRequest extends FormRequest
 {
@@ -13,7 +14,7 @@ class AvailabilityRequest extends FormRequest
     }
 
     /**
-     * @return array<string, list<string>>
+     * @return array<string, list<string|\Closure|In>>
      */
     public function rules(): array
     {
@@ -34,7 +35,7 @@ class AvailabilityRequest extends FormRequest
     }
 
     /**
-     * @return array{starts_after?: string, ends_before?: string}
+     * @return array{starts_after?: string, ends_before?: string, type?: 'one-on-one'|'group'}
      */
     public function filters(): array
     {

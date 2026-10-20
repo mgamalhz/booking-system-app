@@ -25,8 +25,14 @@ interface BookingRepositoryInterface
      */
     public function all(): LengthAwarePaginator;
 
+    /**
+     * @return LengthAwarePaginator<int, Booking>
+     */
     public function indexPage(int $perPage, ?int $customerId = null): LengthAwarePaginator;
 
+    /**
+     * @return LengthAwarePaginator<int, Booking>
+     */
     public function bottleneckIndexPage(int $perPage, ?int $customerId = null): LengthAwarePaginator;
 
     public function find(int $id): Booking;

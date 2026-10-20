@@ -5,7 +5,7 @@ namespace App\Services;
 final class AvailabilityCacheKey
 {
     /**
-     * @param  array{starts_after?: string, ends_before?: string}  $filters
+     * @param  array{starts_after?: string, ends_before?: string, type?: 'one-on-one'|'group'}  $filters
      */
     public static function make(
         int $resourceId,

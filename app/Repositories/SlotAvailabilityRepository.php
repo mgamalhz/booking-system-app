@@ -10,7 +10,7 @@ use Carbon\CarbonImmutable;
 class SlotAvailabilityRepository implements SlotAvailabilityRepositoryInterface
 {
     /**
-     * @param  array{starts_after?: string, ends_before?: string}  $filters
+     * @param  array{starts_after?: string, ends_before?: string, type?: 'one-on-one'|'group'}  $filters
      * @return list<array{slot_id: int, starts_at: string, ends_at: string}>
      */
     public function availableForResource(

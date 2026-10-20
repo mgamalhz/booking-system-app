@@ -18,6 +18,7 @@ use Paymob\Laravel\DTO\OrderItemDto;
 use Paymob\Laravel\DTO\RegisterOrderData;
 use Paymob\Laravel\DTO\RequestPaymentKeyData;
 use Paymob\Laravel\Models\Payment;
+use RuntimeException;
 use Throwable;
 
 class BookingPaymentService
@@ -58,6 +59,9 @@ class BookingPaymentService
         });
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function createPayment(Booking $booking): array
     {
         if ($booking->status !== 'pending') {
