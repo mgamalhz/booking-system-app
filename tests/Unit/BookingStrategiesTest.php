@@ -94,6 +94,9 @@ class BookingStrategiesTest extends TestCase
 
         $strategy = BookingStrategyResolver::resolve('recurring');
 
+        foreach ($strategy->generateDates(Carbon::parse($data['start_date']), Carbon::parse($data['end_date']), 'monthly') as $date) {
+            Slot::factory()->create(['date' => $date, 'start_time' => '13:00:00', 'end_time' => '14:00:00']);
+        }
         $booking = $strategy->createBooking($data);
         $dates = $strategy->generateDates(Carbon::parse($data['start_date']), Carbon::parse($data['end_date']), 'monthly');
 

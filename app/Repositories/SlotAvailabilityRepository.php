@@ -19,12 +19,19 @@ class SlotAvailabilityRepository implements SlotAvailabilityRepositoryInterface
     ): array {
         $slots = Slot::query()
             ->where('status', 'active')
-            ->whereBetween('date', [$startDate, $endDate])
+            ->where('date', '>=', $startDate)
+            ->where('date', '<', CarbonImmutable::parse($endDate)->addDay()->toDateString())
             ->when(isset($filters['starts_after']), fn ($query) => $query->whereTime('start_time', '>=', $filters['starts_after']))
             ->when(isset($filters['ends_before']), fn ($query) => $query->whereTime('end_time', '<=', $filters['ends_before']))
-            ->whereDoesntHave('bookings', fn ($query) => $query
-                ->where('resource_id', $resource->id)
-                ->whereIn('status', ['pending', 'confirmed']))
+            ->when(($filters['type'] ?? 'one-on-one') === 'group',
+                fn ($query) => $query
+                    ->whereDoesntHave('bookings', fn ($bookings) => $bookings
+                        ->whereIn('status', ['pending', 'confirmed'])
+                        ->where(fn ($occupied) => $occupied->where('type', '!=', 'group')
+                            ->orWhere('resource_id', '!=', $resource->id)))
+                    ->whereHas('bookings', fn ($bookings) => $bookings->whereIn('status', ['pending', 'confirmed']), '<', (int) $resource->capacity),
+                fn ($query) => $query->whereDoesntHave('bookings', fn ($bookings) => $bookings
+                    ->whereIn('status', ['pending', 'confirmed'])))
             ->orderBy('date')
             ->orderBy('start_time')
             ->get();

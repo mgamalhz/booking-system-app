@@ -39,16 +39,18 @@ class RecurringBookingStrategy implements BookingStrategyInterface
             }
 
             foreach ($dates as $date) {
-                $slot = Slot::firstOrCreate([
-                    'date' => $date,
-                    'start_time' => $data['start_time'],
-                    'end_time' => $data['end_time'],
-                    'status' => 'active',
-                ]);
+                // Recurrence reserves existing inventory, in chronological lock order.
+                $slot = Slot::query()->whereDate('date', $date)
+                    ->where('start_time', Carbon::parse($data['start_time'])->format('H:i:s'))
+                    ->where('end_time', Carbon::parse($data['end_time'])->format('H:i:s'))
+                    ->where('status', 'active')->orderBy('id')->lockForUpdate()->first();
+                if ($slot === null) {
+                    throw new ApiConflictException('No active slot exists for '.$date->toDateString().'.');
+                }
 
                 $alreadyBooked = Booking::where('slot_id', $slot->id)
                     ->whereIn('status', ['confirmed', 'pending'])
-                    ->exists();
+                    ->lockForUpdate()->toBase()->first(['id']) !== null;
 
                 if ($alreadyBooked) {
                     throw new ApiConflictException("Slot already booked for date {$date->toDateString()}.");
@@ -59,7 +61,7 @@ class RecurringBookingStrategy implements BookingStrategyInterface
                     'resource_id' => $data['resource_id'],
                     'slot_id' => $slot->id,
                     'type' => 'recurring',
-                    'status' => 'confirmed',
+                    'status' => 'pending',
                     'recurrence_rule' => $data['recurrence_rule'],
                     'end_date' => $data['end_date'],
                 ]);

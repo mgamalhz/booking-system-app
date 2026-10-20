@@ -29,6 +29,12 @@ class ProfileBookingEndpoints extends Command
 
     public function handle(Kernel $kernel): int
     {
+        if (! app()->environment(['local', 'testing'])) {
+            $this->error('Profiling is restricted to local and testing environments.');
+
+            return self::FAILURE;
+        }
+
         $iterations = max(1, (int) $this->option('iterations'));
         $customer = Customer::query()->where('email', 'profile@example.test')->first();
         if (! $customer) {
@@ -71,8 +77,8 @@ class ProfileBookingEndpoints extends Command
         });
 
         for ($i = 0; $i < $iterations; $i++) {
-            $this->measure($kernel, 'GET /api/booking?profile_bottleneck=1', Request::create(
-                '/api/booking?profile_bottleneck=1&per_page=50',
+            $this->measure($kernel, 'GET /api/bookings?profile_bottleneck=1', Request::create(
+                '/api/bookings?profile_bottleneck=1&per_page=50',
                 'GET',
                 [],
                 [],
@@ -81,7 +87,7 @@ class ProfileBookingEndpoints extends Command
             ));
 
             $this->measure($kernel, 'GET /api/booking', Request::create(
-                '/api/booking?per_page=50',
+                '/api/bookings?per_page=50',
                 'GET',
                 [],
                 [],

@@ -6,6 +6,7 @@ use App\Data\AvailabilityCriteria;
 use App\Models\Resource;
 use App\Repositories\Interfaces\SlotAvailabilityRepositoryInterface;
 use App\Services\Contracts\AvailabilityCacheInterface;
+use Carbon\CarbonImmutable;
 
 class SlotAvailabilityService
 {
@@ -25,7 +26,7 @@ class SlotAvailabilityService
 
         $criteria = new AvailabilityCriteria($startDate, $endDate, $timezone, $filters);
 
-        return $this->cache->remember(
+        $slots = $this->cache->remember(
             $resource,
             $criteria,
             fn (): array => $this->availabilityRepository->availableForResource(
@@ -36,5 +37,7 @@ class SlotAvailabilityService
                 $filters
             )
         );
+
+        return array_values(array_filter($slots, fn (array $slot): bool => CarbonImmutable::parse($slot['starts_at'])->isFuture()));
     }
 }

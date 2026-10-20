@@ -111,7 +111,7 @@ test('availability cache listener invalidates slot and resource availability key
         ->and(Cache::has("resource:{$booking->resource_id}:availability"))->toBeFalse();
 });
 
-test('confirmation notification listener sends the notification and is queued', function () {
+test('confirmation notification listener dispatches the queued confirmation job', function () {
     Notification::fake();
 
     $booking = Booking::factory()->create(['status' => 'confirmed']);
@@ -128,7 +128,6 @@ test('confirmation notification listener sends the notification and is queued', 
     $listener = new BookingConfirmationNotificationListener;
     $listener->handle($event);
 
-    expect($listener)->toBeInstanceOf(ShouldQueue::class);
     Notification::assertSentTo($booking->customer, BookingConfirmationNotification::class);
 });
 

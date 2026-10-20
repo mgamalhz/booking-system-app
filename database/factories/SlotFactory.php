@@ -29,7 +29,7 @@ class SlotFactory extends Factory
         return [
             'start_time' => $start->format('H:i:s'),
             'end_time' => $end->format('H:i:s'),
-            'date' => fake()->date,
+            'date' => Carbon::tomorrow()->toDateString(),
             'status' => 'active',
         ];
     }

@@ -13,7 +13,9 @@ use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Paymob\Laravel\Models\Payment;
 
 class BookingController extends Controller
 {
@@ -23,11 +25,18 @@ class BookingController extends Controller
 
         if ($request->boolean('profile_bottleneck') && app()->environment(['local', 'testing'])) {
             return response()->json($this->bottleneckIndexPayload(
-                $bookingService->getBottleneckBookingIndex($perPage)
+                $bookingService->getBottleneckBookingIndex($perPage, (int) $request->user()->id)
             ));
         }
 
-        return response()->json($this->indexPayload($bookingService->getBookingIndex($perPage)));
+        return response()->json($this->indexPayload($bookingService->getBookingIndex($perPage, (int) $request->user()->id)));
+    }
+
+    public function show(Request $request, Booking $booking): JsonResponse
+    {
+        abort_unless((int) $booking->customer_id === (int) $request->user()->id, 403);
+
+        return response()->json(['success' => true, 'booking' => $booking]);
     }
 
     public function store(StoreBookingRequest $request, BookingService $bookingService): JsonResponse
@@ -60,7 +69,7 @@ class BookingController extends Controller
     ): JsonResponse {
         abort_if((int) $booking->customer_id !== (int) auth()->id(), 403);
 
-        $data = $request->validated();
+        $data = $request->safe()->only(['status']);
 
         if (($data['status'] ?? null) === 'confirmed' && $booking->status === 'pending') {
             $payment = $bookingPaymentService->startPaymentForBooking($booking, (int) auth()->id());
@@ -73,11 +82,16 @@ class BookingController extends Controller
             ]);
         }
 
-        $booking = DB::transaction(function () use ($data, $booking, $bookingService) {
-            $booking = $bookingService->updateExistingBooking($booking, $data);
+        $booking = Cache::lock('booking:'.$booking->id.':payment', 150)->block(2,
+            function () use ($booking, $data, $bookingService) {
+                if (Payment::query()->where('order_type', Booking::class)
+                    ->where('order_id', (string) $booking->id)->where('status', 'processing')->exists()) {
+                    throw new ApiConflictException('A payment is processing. Reconcile it before cancellation.');
+                }
 
-            return $booking->fresh();
-        });
+                return $bookingService->updateExistingBooking($booking, $data);
+            }
+        );
 
         return response()->json([
             'success' => true,

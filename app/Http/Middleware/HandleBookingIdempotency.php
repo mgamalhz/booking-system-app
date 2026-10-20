@@ -3,15 +3,18 @@
 namespace App\Http\Middleware;
 
 use App\Exceptions\ApiConflictException;
+use App\Http\Requests\StoreBookingRequest;
 use App\Models\IdempotencyKey;
+use App\Support\ApiErrorResponse;
 use Closure;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
-use Throwable;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class HandleBookingIdempotency
 {
@@ -20,25 +23,14 @@ class HandleBookingIdempotency
         $header = trim((string) $request->header('Idempotency-Key'));
 
         if ($header === '') {
-            DB::beginTransaction();
+            // Preserve validation errors without executing booking writes or side effects.
+            app(StoreBookingRequest::class);
 
-            try {
-                /** @var Response $response */
-                $response = $next($request);
-            } catch (Throwable $exception) {
-                DB::rollBack();
+            return ApiErrorResponse::from(new HttpException(400), $request);
+        }
 
-                throw $exception;
-            }
-
-            DB::rollBack();
-            if ($response->getStatusCode() >= 400) {
-                return $response;
-            }
-
-            return response()->json([
-                'message' => 'The Idempotency-Key header is required.',
-            ], 400);
+        if (strlen($header) > 255) {
+            throw ValidationException::withMessages(['Idempotency-Key' => ['The key must not exceed 255 bytes.']]);
         }
 
         $customerId = (int) $request->user()->id;
@@ -82,7 +74,11 @@ class HandleBookingIdempotency
                     ->where('customer_id', $customerId)
                     ->where('idempotency_key', $header)
                     ->lockForUpdate()
-                    ->firstOrFail();
+                    ->first();
+
+                if ($idempotencyKey === null) {
+                    throw new ApiConflictException('The selected slot is no longer available.');
+                }
 
                 return $this->replayStoredResponse($idempotencyKey, $payloadHash);
             });
@@ -96,9 +92,9 @@ class HandleBookingIdempotency
     private function replayStoredResponse(IdempotencyKey $idempotencyKey, string $payloadHash): Response
     {
         if (! hash_equals($idempotencyKey->payload_hash, $payloadHash)) {
-            return response()->json([
-                'message' => 'The Idempotency-Key header was already used with a different payload.',
-            ], 422);
+            throw ValidationException::withMessages([
+                'Idempotency-Key' => ['The Idempotency-Key header was already used with a different payload.'],
+            ]);
         }
 
         return response((string) $idempotencyKey->response_body, (int) $idempotencyKey->response_status)
