@@ -71,6 +71,7 @@ test('it keeps group bookings pending until payment even when minimum participan
     ]);
 
     $data['resource_id'] = $existing->resource_id;
+    $existing->resource->update(['capacity' => 3]);
     $booking = BookingStrategyResolver::resolve('group')->createBooking($data);
 
     expect($booking->status)->toBe('pending');
