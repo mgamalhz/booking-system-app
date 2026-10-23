@@ -192,11 +192,11 @@ class BookingPaymentService
     private function billingData(Booking $booking): BillingDataDto
     {
         $customer = $booking->customer;
-        $nameParts = preg_split('/\s+/', trim($customer->name), 2) ?: [];
+        $nameParts = $customer->billingName();
 
         return new BillingDataDto(
-            firstName: $nameParts[0] ?? 'Customer',
-            lastName: $nameParts[1] ?? 'Customer',
+            firstName: $nameParts['given_name'],
+            lastName: $nameParts['family_name'] ?: 'Customer',
             email: $customer->email,
             phoneNumber: $customer->phone ?: '01000000000',
             street: $customer->address ?: 'NA',
