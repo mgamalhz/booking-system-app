@@ -85,13 +85,10 @@ class BookingRepository implements BookingCancellationRepositoryInterface, Booki
     public function getPendingBookingsForCustomer(int $customerId): Collection
     {
         return Booking::query()
-            ->withoutEagerLoads()
             ->where('customer_id', $customerId)
             ->where('status', 'pending')
             ->latest()
-            ->get()
-            // SIMULATION BASELINE: preserve the response but issue 3 reads per row.
-            ->each(fn (Booking $booking) => $booking->load(['slot', 'resource', 'customer']));
+            ->get();
     }
 
     public function findPendingBookingForCustomer(int $bookingId, int $customerId): Booking
