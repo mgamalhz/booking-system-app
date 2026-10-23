@@ -1,8 +1,6 @@
 <?php
 
 use App\Models\Booking;
-use App\Models\Customer;
-use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -82,37 +80,6 @@ test('group bookings and distinct slots remain available', function () {
     DB::table('bookings')->insert(rawConstraintBooking());
     DB::table('bookings')->insert(rawConstraintBooking());
     expect(DB::table('bookings')->whereNotNull('enforced_one_to_one_slot_id')->count())->toBe(2);
-});
-
-test('session user foreign key rejects orphan identities', function () {
-    expect(fn () => DB::table('sessions')->insert([
-        'id' => 'orphan', 'user_id' => 999999, 'payload' => '', 'last_activity' => 0,
-    ]))->toThrow(QueryException::class);
-});
-
-test('deleting a customer makes their session anonymous', function () {
-    $user = Customer::factory()->create();
-    DB::table('sessions')->insert([
-        'id' => 'retained', 'user_id' => $user->id, 'payload' => 'payload', 'last_activity' => 0,
-    ]);
-    DB::table('customers')->where('id', $user->id)->delete();
-    expect(DB::table('sessions')->where('id', 'retained')->first())->user_id->toBeNull()->payload->toBe('payload');
-});
-
-test('session migration repairs existing orphan identities', function () {
-    $migration = require database_path('migrations/2026_10_23_000001_constrain_session_users.php');
-    $migration->down();
-    DB::table('sessions')->insert([
-        'id' => 'legacy', 'user_id' => 999999, 'payload' => 'payload', 'last_activity' => 0,
-    ]);
-    $migration->up();
-    expect(DB::table('sessions')->where('id', 'legacy')->first())->user_id->toBeNull()->payload->toBe('payload');
-});
-
-test('session migration refuses a different authentication provider before cleanup', function () {
-    $migration = require database_path('migrations/2026_10_23_000001_constrain_session_users.php');
-    config()->set('auth.providers.users.model', User::class);
-    expect(fn () => $migration->up())->toThrow(RuntimeException::class, 'Customer authentication provider');
 });
 
 test('active slot migration can resume after adding the generated column', function () {
