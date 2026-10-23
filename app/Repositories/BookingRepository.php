@@ -37,19 +37,17 @@ class BookingRepository implements BookingCancellationRepositoryInterface, Booki
 
     public function indexPage(int $perPage, ?int $customerId = null): LengthAwarePaginator
     {
-        $page = Booking::query()
+        return Booking::query()
             ->when($customerId !== null, fn ($query) => $query->where('customer_id', $customerId))
             ->withoutEagerLoads()
+            ->with([
+                'customer:id,name,email',
+                'resource:id,name,type',
+                'slot:id,date,start_time,end_time',
+            ])
+            ->withCount('documents')
             ->latest('id')
             ->paginate($perPage);
-
-        // SIMULATION BASELINE: intentionally load relationships once per row.
-        foreach ($page as $booking) {
-            $booking->load(['customer:id,name,email', 'resource:id,name,type', 'slot:id,date,start_time,end_time']);
-            $booking->documents_count = $booking->documents()->count();
-        }
-
-        return $page;
     }
 
     public function bottleneckIndexPage(int $perPage, ?int $customerId = null): LengthAwarePaginator
