@@ -30,11 +30,16 @@ class SlotAvailabilityRepository implements SlotAvailabilityRepositoryInterface
                         ->where(fn ($occupied) => $occupied->where('type', '!=', 'group')
                             ->orWhere('resource_id', '!=', $resource->id)))
                     ->whereHas('bookings', fn ($bookings) => $bookings->whereIn('status', ['pending', 'confirmed']), '<', (int) $resource->capacity),
-                fn ($query) => $query->whereDoesntHave('bookings', fn ($bookings) => $bookings
-                    ->whereIn('status', ['pending', 'confirmed'])))
+                fn ($query) => $query)
             ->orderBy('date')
             ->orderBy('start_time')
             ->get();
+
+        if (($filters['type'] ?? 'one-on-one') !== 'group') {
+            // SIMULATION BASELINE: one occupancy query per candidate slot.
+            $slots = $slots->filter(fn (Slot $slot) => ! $slot->bookings()
+                ->whereIn('status', ['pending', 'confirmed'])->exists())->values();
+        }
 
         $sourceTimezone = (string) config('app.timezone', 'UTC');
 

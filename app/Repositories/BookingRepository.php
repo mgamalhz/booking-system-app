@@ -37,17 +37,19 @@ class BookingRepository implements BookingCancellationRepositoryInterface, Booki
 
     public function indexPage(int $perPage, ?int $customerId = null): LengthAwarePaginator
     {
-        return Booking::query()
+        $page = Booking::query()
             ->when($customerId !== null, fn ($query) => $query->where('customer_id', $customerId))
             ->withoutEagerLoads()
-            ->with([
-                'customer:id,name,email',
-                'resource:id,name,type',
-                'slot:id,date,start_time,end_time',
-            ])
-            ->withCount('documents')
             ->latest('id')
             ->paginate($perPage);
+
+        // SIMULATION BASELINE: intentionally load relationships once per row.
+        foreach ($page as $booking) {
+            $booking->load(['customer:id,name,email', 'resource:id,name,type', 'slot:id,date,start_time,end_time']);
+            $booking->documents_count = $booking->documents()->count();
+        }
+
+        return $page;
     }
 
     public function bottleneckIndexPage(int $perPage, ?int $customerId = null): LengthAwarePaginator
@@ -85,10 +87,13 @@ class BookingRepository implements BookingCancellationRepositoryInterface, Booki
     public function getPendingBookingsForCustomer(int $customerId): Collection
     {
         return Booking::query()
+            ->withoutEagerLoads()
             ->where('customer_id', $customerId)
             ->where('status', 'pending')
             ->latest()
-            ->get();
+            ->get()
+            // SIMULATION BASELINE: preserve the response but issue 3 reads per row.
+            ->each(fn (Booking $booking) => $booking->load(['slot', 'resource', 'customer']));
     }
 
     public function findPendingBookingForCustomer(int $bookingId, int $customerId): Booking
