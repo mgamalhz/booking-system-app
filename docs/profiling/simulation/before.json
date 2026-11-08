@@ -1,0 +1,1068 @@
+{
+    "simulation": true,
+    "phase": "before",
+    "measured_at_utc": "2026-10-23T14:25:42+00:00",
+    "frozen_application_clock": "2030-01-01T00:00:00+00:00",
+    "php": "8.4.25",
+    "mysql": "8.0.45",
+    "database": "booking_simulation_20261023",
+    "dataset": {
+        "customers": 250,
+        "resources": 50,
+        "slots": 5000,
+        "bookings": 3000,
+        "booking_documents": 1500
+    },
+    "warmups": 2,
+    "iterations": 20,
+    "cache": "redis",
+    "telescope": false,
+    "conditions": "Serial HTTP-kernel latency; fresh bearer auth per request; cold availability cache; same fixture\/clock; token writes rolled back; excludes setup, cache reset, network and termination.",
+    "results": {
+        "booking-index": {
+            "request": "\/api\/bookings?per_page=50",
+            "samples": [
+                {
+                    "latency_ms": 110.103,
+                    "queries": 204,
+                    "sql_ms": 61.2,
+                    "status": 200,
+                    "response_sha256": "0bceb537e9f2c8bdeed246a1fc511cb7ce86258a20f55a234d0ea4332802d404",
+                    "bytes": 14863,
+                    "items": 50
+                },
+                {
+                    "latency_ms": 94.549,
+                    "queries": 204,
+                    "sql_ms": 48.4,
+                    "status": 200,
+                    "response_sha256": "0bceb537e9f2c8bdeed246a1fc511cb7ce86258a20f55a234d0ea4332802d404",
+                    "bytes": 14863,
+                    "items": 50
+                },
+                {
+                    "latency_ms": 107,
+                    "queries": 204,
+                    "sql_ms": 61.64,
+                    "status": 200,
+                    "response_sha256": "0bceb537e9f2c8bdeed246a1fc511cb7ce86258a20f55a234d0ea4332802d404",
+                    "bytes": 14863,
+                    "items": 50
+                },
+                {
+                    "latency_ms": 126.004,
+                    "queries": 204,
+                    "sql_ms": 77.67,
+                    "status": 200,
+                    "response_sha256": "0bceb537e9f2c8bdeed246a1fc511cb7ce86258a20f55a234d0ea4332802d404",
+                    "bytes": 14863,
+                    "items": 50
+                },
+                {
+                    "latency_ms": 87.631,
+                    "queries": 204,
+                    "sql_ms": 44.41,
+                    "status": 200,
+                    "response_sha256": "0bceb537e9f2c8bdeed246a1fc511cb7ce86258a20f55a234d0ea4332802d404",
+                    "bytes": 14863,
+                    "items": 50
+                },
+                {
+                    "latency_ms": 92.284,
+                    "queries": 204,
+                    "sql_ms": 46.91,
+                    "status": 200,
+                    "response_sha256": "0bceb537e9f2c8bdeed246a1fc511cb7ce86258a20f55a234d0ea4332802d404",
+                    "bytes": 14863,
+                    "items": 50
+                },
+                {
+                    "latency_ms": 94.075,
+                    "queries": 204,
+                    "sql_ms": 48.99,
+                    "status": 200,
+                    "response_sha256": "0bceb537e9f2c8bdeed246a1fc511cb7ce86258a20f55a234d0ea4332802d404",
+                    "bytes": 14863,
+                    "items": 50
+                },
+                {
+                    "latency_ms": 84.269,
+                    "queries": 204,
+                    "sql_ms": 41.24,
+                    "status": 200,
+                    "response_sha256": "0bceb537e9f2c8bdeed246a1fc511cb7ce86258a20f55a234d0ea4332802d404",
+                    "bytes": 14863,
+                    "items": 50
+                },
+                {
+                    "latency_ms": 85.065,
+                    "queries": 204,
+                    "sql_ms": 43.17,
+                    "status": 200,
+                    "response_sha256": "0bceb537e9f2c8bdeed246a1fc511cb7ce86258a20f55a234d0ea4332802d404",
+                    "bytes": 14863,
+                    "items": 50
+                },
+                {
+                    "latency_ms": 88.009,
+                    "queries": 204,
+                    "sql_ms": 44.85,
+                    "status": 200,
+                    "response_sha256": "0bceb537e9f2c8bdeed246a1fc511cb7ce86258a20f55a234d0ea4332802d404",
+                    "bytes": 14863,
+                    "items": 50
+                },
+                {
+                    "latency_ms": 89.936,
+                    "queries": 204,
+                    "sql_ms": 46.11,
+                    "status": 200,
+                    "response_sha256": "0bceb537e9f2c8bdeed246a1fc511cb7ce86258a20f55a234d0ea4332802d404",
+                    "bytes": 14863,
+                    "items": 50
+                },
+                {
+                    "latency_ms": 95.318,
+                    "queries": 204,
+                    "sql_ms": 52.2,
+                    "status": 200,
+                    "response_sha256": "0bceb537e9f2c8bdeed246a1fc511cb7ce86258a20f55a234d0ea4332802d404",
+                    "bytes": 14863,
+                    "items": 50
+                },
+                {
+                    "latency_ms": 88.611,
+                    "queries": 204,
+                    "sql_ms": 45.1,
+                    "status": 200,
+                    "response_sha256": "0bceb537e9f2c8bdeed246a1fc511cb7ce86258a20f55a234d0ea4332802d404",
+                    "bytes": 14863,
+                    "items": 50
+                },
+                {
+                    "latency_ms": 88.86,
+                    "queries": 204,
+                    "sql_ms": 45.41,
+                    "status": 200,
+                    "response_sha256": "0bceb537e9f2c8bdeed246a1fc511cb7ce86258a20f55a234d0ea4332802d404",
+                    "bytes": 14863,
+                    "items": 50
+                },
+                {
+                    "latency_ms": 124.131,
+                    "queries": 204,
+                    "sql_ms": 78.65,
+                    "status": 200,
+                    "response_sha256": "0bceb537e9f2c8bdeed246a1fc511cb7ce86258a20f55a234d0ea4332802d404",
+                    "bytes": 14863,
+                    "items": 50
+                },
+                {
+                    "latency_ms": 139.812,
+                    "queries": 204,
+                    "sql_ms": 89.87,
+                    "status": 200,
+                    "response_sha256": "0bceb537e9f2c8bdeed246a1fc511cb7ce86258a20f55a234d0ea4332802d404",
+                    "bytes": 14863,
+                    "items": 50
+                },
+                {
+                    "latency_ms": 91.263,
+                    "queries": 204,
+                    "sql_ms": 47.43,
+                    "status": 200,
+                    "response_sha256": "0bceb537e9f2c8bdeed246a1fc511cb7ce86258a20f55a234d0ea4332802d404",
+                    "bytes": 14863,
+                    "items": 50
+                },
+                {
+                    "latency_ms": 95.201,
+                    "queries": 204,
+                    "sql_ms": 48.46,
+                    "status": 200,
+                    "response_sha256": "0bceb537e9f2c8bdeed246a1fc511cb7ce86258a20f55a234d0ea4332802d404",
+                    "bytes": 14863,
+                    "items": 50
+                },
+                {
+                    "latency_ms": 103.335,
+                    "queries": 204,
+                    "sql_ms": 53.89,
+                    "status": 200,
+                    "response_sha256": "0bceb537e9f2c8bdeed246a1fc511cb7ce86258a20f55a234d0ea4332802d404",
+                    "bytes": 14863,
+                    "items": 50
+                },
+                {
+                    "latency_ms": 112.843,
+                    "queries": 204,
+                    "sql_ms": 63.92,
+                    "status": 200,
+                    "response_sha256": "0bceb537e9f2c8bdeed246a1fc511cb7ce86258a20f55a234d0ea4332802d404",
+                    "bytes": 14863,
+                    "items": 50
+                }
+            ],
+            "query_groups": [
+                {
+                    "sql": "select * from `personal_access_tokens` where `personal_access_tokens`.`id` = ? limit 1",
+                    "bindings": [
+                        "1"
+                    ],
+                    "ms": 0.72,
+                    "executions": 1,
+                    "explain": [
+                        {
+                            "id": 1,
+                            "select_type": "SIMPLE",
+                            "table": null,
+                            "partitions": null,
+                            "type": null,
+                            "possible_keys": null,
+                            "key": null,
+                            "key_len": null,
+                            "ref": null,
+                            "rows": null,
+                            "filtered": null,
+                            "Extra": "no matching row in const table"
+                        }
+                    ]
+                },
+                {
+                    "sql": "select * from `customers` where `customers`.`id` = ? limit 1",
+                    "bindings": [
+                        1
+                    ],
+                    "ms": 0.37,
+                    "executions": 1,
+                    "explain": [
+                        {
+                            "id": 1,
+                            "select_type": "SIMPLE",
+                            "table": "customers",
+                            "partitions": null,
+                            "type": "const",
+                            "possible_keys": "PRIMARY",
+                            "key": "PRIMARY",
+                            "key_len": "8",
+                            "ref": "const",
+                            "rows": 1,
+                            "filtered": 100,
+                            "Extra": null
+                        }
+                    ]
+                },
+                {
+                    "sql": "select count(*) as `aggregate` from `bookings` where `customer_id` = ? and `bookings`.`deleted_at` is null",
+                    "bindings": [
+                        1
+                    ],
+                    "ms": 1.18,
+                    "executions": 1,
+                    "explain": [
+                        {
+                            "id": 1,
+                            "select_type": "SIMPLE",
+                            "table": "bookings",
+                            "partitions": null,
+                            "type": "ALL",
+                            "possible_keys": "bookings_customer_id_foreign",
+                            "key": null,
+                            "key_len": null,
+                            "ref": null,
+                            "rows": 3000,
+                            "filtered": 10,
+                            "Extra": "Using where"
+                        }
+                    ]
+                },
+                {
+                    "sql": "select * from `bookings` where `customer_id` = ? and `bookings`.`deleted_at` is null order by `id` desc limit 50 offset 0",
+                    "bindings": [
+                        1
+                    ],
+                    "ms": 0.77,
+                    "executions": 1,
+                    "explain": [
+                        {
+                            "id": 1,
+                            "select_type": "SIMPLE",
+                            "table": "bookings",
+                            "partitions": null,
+                            "type": "range",
+                            "possible_keys": "bookings_customer_id_foreign",
+                            "key": "bookings_customer_id_foreign",
+                            "key_len": "8",
+                            "ref": null,
+                            "rows": 3000,
+                            "filtered": 10,
+                            "Extra": "Using index condition; Using where; Backward index scan"
+                        }
+                    ]
+                },
+                {
+                    "sql": "select `id`, `name`, `email` from `customers` where `customers`.`id` in (1)",
+                    "bindings": [],
+                    "ms": 0.41,
+                    "executions": 50,
+                    "explain": [
+                        {
+                            "id": 1,
+                            "select_type": "SIMPLE",
+                            "table": "customers",
+                            "partitions": null,
+                            "type": "const",
+                            "possible_keys": "PRIMARY",
+                            "key": "PRIMARY",
+                            "key_len": "8",
+                            "ref": "const",
+                            "rows": 1,
+                            "filtered": 100,
+                            "Extra": null
+                        }
+                    ]
+                },
+                {
+                    "sql": "select `id`, `name`, `type` from `resources` where `resources`.`id` in (50)",
+                    "bindings": [],
+                    "ms": 0.28,
+                    "executions": 50,
+                    "explain": [
+                        {
+                            "id": 1,
+                            "select_type": "SIMPLE",
+                            "table": "resources",
+                            "partitions": null,
+                            "type": "const",
+                            "possible_keys": "PRIMARY",
+                            "key": "PRIMARY",
+                            "key_len": "8",
+                            "ref": "const",
+                            "rows": 1,
+                            "filtered": 100,
+                            "Extra": null
+                        }
+                    ]
+                },
+                {
+                    "sql": "select `id`, `date`, `start_time`, `end_time` from `slots` where `slots`.`id` in (3000)",
+                    "bindings": [],
+                    "ms": 0.28,
+                    "executions": 50,
+                    "explain": [
+                        {
+                            "id": 1,
+                            "select_type": "SIMPLE",
+                            "table": "slots",
+                            "partitions": null,
+                            "type": "const",
+                            "possible_keys": "PRIMARY",
+                            "key": "PRIMARY",
+                            "key_len": "8",
+                            "ref": "const",
+                            "rows": 1,
+                            "filtered": 100,
+                            "Extra": null
+                        }
+                    ]
+                },
+                {
+                    "sql": "select count(*) as `aggregate` from `booking_documents` where `booking_documents`.`booking_id` = ? and `booking_documents`.`booking_id` is not null and `booking_documents`.`deleted_at` is null",
+                    "bindings": [
+                        3000
+                    ],
+                    "ms": 0.31,
+                    "executions": 50,
+                    "explain": [
+                        {
+                            "id": 1,
+                            "select_type": "SIMPLE",
+                            "table": "booking_documents",
+                            "partitions": null,
+                            "type": "ref",
+                            "possible_keys": "booking_documents_booking_id_index",
+                            "key": "booking_documents_booking_id_index",
+                            "key_len": "8",
+                            "ref": "const",
+                            "rows": 1,
+                            "filtered": 10,
+                            "Extra": "Using where"
+                        }
+                    ]
+                }
+            ],
+            "p50_ms": 94.075,
+            "p95_ms": 126.004,
+            "queries_per_request": 204,
+            "sql_ms_per_request": 54.476,
+            "response_hashes": [
+                "0bceb537e9f2c8bdeed246a1fc511cb7ce86258a20f55a234d0ea4332802d404"
+            ]
+        },
+        "non-paid": {
+            "request": "\/api\/bookings\/non-paid",
+            "samples": [
+                {
+                    "latency_ms": 1343.43,
+                    "queries": 2253,
+                    "sql_ms": 488.2,
+                    "status": 200,
+                    "response_sha256": "c76bb42ec132acf26781012d07b7966754de66946585de53a5ae88ff2842fd68",
+                    "bytes": 829535,
+                    "items": 750
+                },
+                {
+                    "latency_ms": 1321.027,
+                    "queries": 2253,
+                    "sql_ms": 470.34,
+                    "status": 200,
+                    "response_sha256": "c76bb42ec132acf26781012d07b7966754de66946585de53a5ae88ff2842fd68",
+                    "bytes": 829535,
+                    "items": 750
+                },
+                {
+                    "latency_ms": 1454.85,
+                    "queries": 2253,
+                    "sql_ms": 570,
+                    "status": 200,
+                    "response_sha256": "c76bb42ec132acf26781012d07b7966754de66946585de53a5ae88ff2842fd68",
+                    "bytes": 829535,
+                    "items": 750
+                },
+                {
+                    "latency_ms": 1588.699,
+                    "queries": 2253,
+                    "sql_ms": 667.73,
+                    "status": 200,
+                    "response_sha256": "c76bb42ec132acf26781012d07b7966754de66946585de53a5ae88ff2842fd68",
+                    "bytes": 829535,
+                    "items": 750
+                },
+                {
+                    "latency_ms": 1283.268,
+                    "queries": 2253,
+                    "sql_ms": 449.4,
+                    "status": 200,
+                    "response_sha256": "c76bb42ec132acf26781012d07b7966754de66946585de53a5ae88ff2842fd68",
+                    "bytes": 829535,
+                    "items": 750
+                },
+                {
+                    "latency_ms": 1256.711,
+                    "queries": 2253,
+                    "sql_ms": 422.54,
+                    "status": 200,
+                    "response_sha256": "c76bb42ec132acf26781012d07b7966754de66946585de53a5ae88ff2842fd68",
+                    "bytes": 829535,
+                    "items": 750
+                },
+                {
+                    "latency_ms": 1244.061,
+                    "queries": 2253,
+                    "sql_ms": 408.42,
+                    "status": 200,
+                    "response_sha256": "c76bb42ec132acf26781012d07b7966754de66946585de53a5ae88ff2842fd68",
+                    "bytes": 829535,
+                    "items": 750
+                },
+                {
+                    "latency_ms": 1288.947,
+                    "queries": 2253,
+                    "sql_ms": 452.21,
+                    "status": 200,
+                    "response_sha256": "c76bb42ec132acf26781012d07b7966754de66946585de53a5ae88ff2842fd68",
+                    "bytes": 829535,
+                    "items": 750
+                },
+                {
+                    "latency_ms": 1247.473,
+                    "queries": 2253,
+                    "sql_ms": 415.87,
+                    "status": 200,
+                    "response_sha256": "c76bb42ec132acf26781012d07b7966754de66946585de53a5ae88ff2842fd68",
+                    "bytes": 829535,
+                    "items": 750
+                },
+                {
+                    "latency_ms": 1247.84,
+                    "queries": 2253,
+                    "sql_ms": 412.95,
+                    "status": 200,
+                    "response_sha256": "c76bb42ec132acf26781012d07b7966754de66946585de53a5ae88ff2842fd68",
+                    "bytes": 829535,
+                    "items": 750
+                },
+                {
+                    "latency_ms": 1292.284,
+                    "queries": 2253,
+                    "sql_ms": 458.08,
+                    "status": 200,
+                    "response_sha256": "c76bb42ec132acf26781012d07b7966754de66946585de53a5ae88ff2842fd68",
+                    "bytes": 829535,
+                    "items": 750
+                },
+                {
+                    "latency_ms": 1506.822,
+                    "queries": 2253,
+                    "sql_ms": 621.97,
+                    "status": 200,
+                    "response_sha256": "c76bb42ec132acf26781012d07b7966754de66946585de53a5ae88ff2842fd68",
+                    "bytes": 829535,
+                    "items": 750
+                },
+                {
+                    "latency_ms": 1285.766,
+                    "queries": 2253,
+                    "sql_ms": 447.19,
+                    "status": 200,
+                    "response_sha256": "c76bb42ec132acf26781012d07b7966754de66946585de53a5ae88ff2842fd68",
+                    "bytes": 829535,
+                    "items": 750
+                },
+                {
+                    "latency_ms": 1303.661,
+                    "queries": 2253,
+                    "sql_ms": 445.42,
+                    "status": 200,
+                    "response_sha256": "c76bb42ec132acf26781012d07b7966754de66946585de53a5ae88ff2842fd68",
+                    "bytes": 829535,
+                    "items": 750
+                },
+                {
+                    "latency_ms": 1508.158,
+                    "queries": 2253,
+                    "sql_ms": 609.88,
+                    "status": 200,
+                    "response_sha256": "c76bb42ec132acf26781012d07b7966754de66946585de53a5ae88ff2842fd68",
+                    "bytes": 829535,
+                    "items": 750
+                },
+                {
+                    "latency_ms": 1336.105,
+                    "queries": 2253,
+                    "sql_ms": 475.05,
+                    "status": 200,
+                    "response_sha256": "c76bb42ec132acf26781012d07b7966754de66946585de53a5ae88ff2842fd68",
+                    "bytes": 829535,
+                    "items": 750
+                },
+                {
+                    "latency_ms": 1273.133,
+                    "queries": 2253,
+                    "sql_ms": 440.06,
+                    "status": 200,
+                    "response_sha256": "c76bb42ec132acf26781012d07b7966754de66946585de53a5ae88ff2842fd68",
+                    "bytes": 829535,
+                    "items": 750
+                },
+                {
+                    "latency_ms": 1376.842,
+                    "queries": 2253,
+                    "sql_ms": 534.15,
+                    "status": 200,
+                    "response_sha256": "c76bb42ec132acf26781012d07b7966754de66946585de53a5ae88ff2842fd68",
+                    "bytes": 829535,
+                    "items": 750
+                },
+                {
+                    "latency_ms": 1708.289,
+                    "queries": 2253,
+                    "sql_ms": 613.14,
+                    "status": 200,
+                    "response_sha256": "c76bb42ec132acf26781012d07b7966754de66946585de53a5ae88ff2842fd68",
+                    "bytes": 829535,
+                    "items": 750
+                },
+                {
+                    "latency_ms": 1703.938,
+                    "queries": 2253,
+                    "sql_ms": 765.36,
+                    "status": 200,
+                    "response_sha256": "c76bb42ec132acf26781012d07b7966754de66946585de53a5ae88ff2842fd68",
+                    "bytes": 829535,
+                    "items": 750
+                }
+            ],
+            "query_groups": [
+                {
+                    "sql": "select * from `personal_access_tokens` where `personal_access_tokens`.`id` = ? limit 1",
+                    "bindings": [
+                        "1"
+                    ],
+                    "ms": 0.78,
+                    "executions": 1,
+                    "explain": [
+                        {
+                            "id": 1,
+                            "select_type": "SIMPLE",
+                            "table": null,
+                            "partitions": null,
+                            "type": null,
+                            "possible_keys": null,
+                            "key": null,
+                            "key_len": null,
+                            "ref": null,
+                            "rows": null,
+                            "filtered": null,
+                            "Extra": "no matching row in const table"
+                        }
+                    ]
+                },
+                {
+                    "sql": "select * from `customers` where `customers`.`id` = ? limit 1",
+                    "bindings": [
+                        1
+                    ],
+                    "ms": 0.45,
+                    "executions": 1,
+                    "explain": [
+                        {
+                            "id": 1,
+                            "select_type": "SIMPLE",
+                            "table": "customers",
+                            "partitions": null,
+                            "type": "const",
+                            "possible_keys": "PRIMARY",
+                            "key": "PRIMARY",
+                            "key_len": "8",
+                            "ref": "const",
+                            "rows": 1,
+                            "filtered": 100,
+                            "Extra": null
+                        }
+                    ]
+                },
+                {
+                    "sql": "select * from `bookings` where `customer_id` = ? and `status` = ? and `bookings`.`deleted_at` is null order by `created_at` desc",
+                    "bindings": [
+                        1,
+                        "pending"
+                    ],
+                    "ms": 4.37,
+                    "executions": 1,
+                    "explain": [
+                        {
+                            "id": 1,
+                            "select_type": "SIMPLE",
+                            "table": "bookings",
+                            "partitions": null,
+                            "type": "ALL",
+                            "possible_keys": "bookings_customer_id_foreign",
+                            "key": null,
+                            "key_len": null,
+                            "ref": null,
+                            "rows": 3000,
+                            "filtered": 2.5,
+                            "Extra": "Using where; Using filesort"
+                        }
+                    ]
+                },
+                {
+                    "sql": "select * from `slots` where `slots`.`id` in (1)",
+                    "bindings": [],
+                    "ms": 0.61,
+                    "executions": 750,
+                    "explain": [
+                        {
+                            "id": 1,
+                            "select_type": "SIMPLE",
+                            "table": "slots",
+                            "partitions": null,
+                            "type": "const",
+                            "possible_keys": "PRIMARY",
+                            "key": "PRIMARY",
+                            "key_len": "8",
+                            "ref": "const",
+                            "rows": 1,
+                            "filtered": 100,
+                            "Extra": null
+                        }
+                    ]
+                },
+                {
+                    "sql": "select * from `resources` where `resources`.`id` in (1)",
+                    "bindings": [],
+                    "ms": 0.44,
+                    "executions": 750,
+                    "explain": [
+                        {
+                            "id": 1,
+                            "select_type": "SIMPLE",
+                            "table": "resources",
+                            "partitions": null,
+                            "type": "const",
+                            "possible_keys": "PRIMARY",
+                            "key": "PRIMARY",
+                            "key_len": "8",
+                            "ref": "const",
+                            "rows": 1,
+                            "filtered": 100,
+                            "Extra": null
+                        }
+                    ]
+                },
+                {
+                    "sql": "select * from `customers` where `customers`.`id` in (1)",
+                    "bindings": [],
+                    "ms": 0.5,
+                    "executions": 750,
+                    "explain": [
+                        {
+                            "id": 1,
+                            "select_type": "SIMPLE",
+                            "table": "customers",
+                            "partitions": null,
+                            "type": "const",
+                            "possible_keys": "PRIMARY",
+                            "key": "PRIMARY",
+                            "key_len": "8",
+                            "ref": "const",
+                            "rows": 1,
+                            "filtered": 100,
+                            "Extra": null
+                        }
+                    ]
+                }
+            ],
+            "p50_ms": 1303.661,
+            "p95_ms": 1703.938,
+            "queries_per_request": 2253,
+            "sql_ms_per_request": 508.398,
+            "response_hashes": [
+                "c76bb42ec132acf26781012d07b7966754de66946585de53a5ae88ff2842fd68"
+            ]
+        },
+        "availability": {
+            "request": "\/api\/resources\/1\/availability?start_date=2030-10-18&end_date=2030-11-17&timezone=Africa%2FCairo",
+            "samples": [
+                {
+                    "latency_ms": 209.08,
+                    "queries": 314,
+                    "sql_ms": 85.23,
+                    "status": 200,
+                    "response_sha256": "f1465ece7575304f813caf9edc9a70d956412285b91c340e91fcb106d2589dd9",
+                    "bytes": 19025,
+                    "items": 200
+                },
+                {
+                    "latency_ms": 216.387,
+                    "queries": 314,
+                    "sql_ms": 91.47,
+                    "status": 200,
+                    "response_sha256": "f1465ece7575304f813caf9edc9a70d956412285b91c340e91fcb106d2589dd9",
+                    "bytes": 19025,
+                    "items": 200
+                },
+                {
+                    "latency_ms": 211.198,
+                    "queries": 314,
+                    "sql_ms": 86.93,
+                    "status": 200,
+                    "response_sha256": "f1465ece7575304f813caf9edc9a70d956412285b91c340e91fcb106d2589dd9",
+                    "bytes": 19025,
+                    "items": 200
+                },
+                {
+                    "latency_ms": 223.235,
+                    "queries": 314,
+                    "sql_ms": 99.45,
+                    "status": 200,
+                    "response_sha256": "f1465ece7575304f813caf9edc9a70d956412285b91c340e91fcb106d2589dd9",
+                    "bytes": 19025,
+                    "items": 200
+                },
+                {
+                    "latency_ms": 204.081,
+                    "queries": 314,
+                    "sql_ms": 80.96,
+                    "status": 200,
+                    "response_sha256": "f1465ece7575304f813caf9edc9a70d956412285b91c340e91fcb106d2589dd9",
+                    "bytes": 19025,
+                    "items": 200
+                },
+                {
+                    "latency_ms": 206.532,
+                    "queries": 314,
+                    "sql_ms": 81.19,
+                    "status": 200,
+                    "response_sha256": "f1465ece7575304f813caf9edc9a70d956412285b91c340e91fcb106d2589dd9",
+                    "bytes": 19025,
+                    "items": 200
+                },
+                {
+                    "latency_ms": 199.502,
+                    "queries": 314,
+                    "sql_ms": 79.08,
+                    "status": 200,
+                    "response_sha256": "f1465ece7575304f813caf9edc9a70d956412285b91c340e91fcb106d2589dd9",
+                    "bytes": 19025,
+                    "items": 200
+                },
+                {
+                    "latency_ms": 200.98,
+                    "queries": 314,
+                    "sql_ms": 79.11,
+                    "status": 200,
+                    "response_sha256": "f1465ece7575304f813caf9edc9a70d956412285b91c340e91fcb106d2589dd9",
+                    "bytes": 19025,
+                    "items": 200
+                },
+                {
+                    "latency_ms": 199.071,
+                    "queries": 314,
+                    "sql_ms": 77.94,
+                    "status": 200,
+                    "response_sha256": "f1465ece7575304f813caf9edc9a70d956412285b91c340e91fcb106d2589dd9",
+                    "bytes": 19025,
+                    "items": 200
+                },
+                {
+                    "latency_ms": 204.662,
+                    "queries": 314,
+                    "sql_ms": 84.63,
+                    "status": 200,
+                    "response_sha256": "f1465ece7575304f813caf9edc9a70d956412285b91c340e91fcb106d2589dd9",
+                    "bytes": 19025,
+                    "items": 200
+                },
+                {
+                    "latency_ms": 208.466,
+                    "queries": 314,
+                    "sql_ms": 80.63,
+                    "status": 200,
+                    "response_sha256": "f1465ece7575304f813caf9edc9a70d956412285b91c340e91fcb106d2589dd9",
+                    "bytes": 19025,
+                    "items": 200
+                },
+                {
+                    "latency_ms": 220.241,
+                    "queries": 314,
+                    "sql_ms": 97.66,
+                    "status": 200,
+                    "response_sha256": "f1465ece7575304f813caf9edc9a70d956412285b91c340e91fcb106d2589dd9",
+                    "bytes": 19025,
+                    "items": 200
+                },
+                {
+                    "latency_ms": 201.621,
+                    "queries": 314,
+                    "sql_ms": 82.54,
+                    "status": 200,
+                    "response_sha256": "f1465ece7575304f813caf9edc9a70d956412285b91c340e91fcb106d2589dd9",
+                    "bytes": 19025,
+                    "items": 200
+                },
+                {
+                    "latency_ms": 231.482,
+                    "queries": 314,
+                    "sql_ms": 109.64,
+                    "status": 200,
+                    "response_sha256": "f1465ece7575304f813caf9edc9a70d956412285b91c340e91fcb106d2589dd9",
+                    "bytes": 19025,
+                    "items": 200
+                },
+                {
+                    "latency_ms": 211.178,
+                    "queries": 314,
+                    "sql_ms": 88.68,
+                    "status": 200,
+                    "response_sha256": "f1465ece7575304f813caf9edc9a70d956412285b91c340e91fcb106d2589dd9",
+                    "bytes": 19025,
+                    "items": 200
+                },
+                {
+                    "latency_ms": 241.549,
+                    "queries": 314,
+                    "sql_ms": 119.14,
+                    "status": 200,
+                    "response_sha256": "f1465ece7575304f813caf9edc9a70d956412285b91c340e91fcb106d2589dd9",
+                    "bytes": 19025,
+                    "items": 200
+                },
+                {
+                    "latency_ms": 207.332,
+                    "queries": 314,
+                    "sql_ms": 84.68,
+                    "status": 200,
+                    "response_sha256": "f1465ece7575304f813caf9edc9a70d956412285b91c340e91fcb106d2589dd9",
+                    "bytes": 19025,
+                    "items": 200
+                },
+                {
+                    "latency_ms": 201.517,
+                    "queries": 314,
+                    "sql_ms": 80.69,
+                    "status": 200,
+                    "response_sha256": "f1465ece7575304f813caf9edc9a70d956412285b91c340e91fcb106d2589dd9",
+                    "bytes": 19025,
+                    "items": 200
+                },
+                {
+                    "latency_ms": 340.311,
+                    "queries": 314,
+                    "sql_ms": 177.54,
+                    "status": 200,
+                    "response_sha256": "f1465ece7575304f813caf9edc9a70d956412285b91c340e91fcb106d2589dd9",
+                    "bytes": 19025,
+                    "items": 200
+                },
+                {
+                    "latency_ms": 206.14,
+                    "queries": 314,
+                    "sql_ms": 87.31,
+                    "status": 200,
+                    "response_sha256": "f1465ece7575304f813caf9edc9a70d956412285b91c340e91fcb106d2589dd9",
+                    "bytes": 19025,
+                    "items": 200
+                }
+            ],
+            "query_groups": [
+                {
+                    "sql": "select * from `personal_access_tokens` where `personal_access_tokens`.`id` = ? limit 1",
+                    "bindings": [
+                        "1"
+                    ],
+                    "ms": 0.68,
+                    "executions": 1,
+                    "explain": [
+                        {
+                            "id": 1,
+                            "select_type": "SIMPLE",
+                            "table": null,
+                            "partitions": null,
+                            "type": null,
+                            "possible_keys": null,
+                            "key": null,
+                            "key_len": null,
+                            "ref": null,
+                            "rows": null,
+                            "filtered": null,
+                            "Extra": "no matching row in const table"
+                        }
+                    ]
+                },
+                {
+                    "sql": "select * from `customers` where `customers`.`id` = ? limit 1",
+                    "bindings": [
+                        1
+                    ],
+                    "ms": 0.6,
+                    "executions": 1,
+                    "explain": [
+                        {
+                            "id": 1,
+                            "select_type": "SIMPLE",
+                            "table": "customers",
+                            "partitions": null,
+                            "type": "const",
+                            "possible_keys": "PRIMARY",
+                            "key": "PRIMARY",
+                            "key_len": "8",
+                            "ref": "const",
+                            "rows": 1,
+                            "filtered": 100,
+                            "Extra": null
+                        }
+                    ]
+                },
+                {
+                    "sql": "select * from `resources` where `id` = ? limit 1",
+                    "bindings": [
+                        "1"
+                    ],
+                    "ms": 0.51,
+                    "executions": 1,
+                    "explain": [
+                        {
+                            "id": 1,
+                            "select_type": "SIMPLE",
+                            "table": "resources",
+                            "partitions": null,
+                            "type": "const",
+                            "possible_keys": "PRIMARY",
+                            "key": "PRIMARY",
+                            "key_len": "8",
+                            "ref": "const",
+                            "rows": 1,
+                            "filtered": 100,
+                            "Extra": null
+                        }
+                    ]
+                },
+                {
+                    "sql": "select * from `slots` where `status` = ? and `date` >= ? and `date` < ? order by `date` asc, `start_time` asc",
+                    "bindings": [
+                        "active",
+                        "2030-10-18",
+                        "2030-11-18"
+                    ],
+                    "ms": 1.38,
+                    "executions": 1,
+                    "explain": [
+                        {
+                            "id": 1,
+                            "select_type": "SIMPLE",
+                            "table": "slots",
+                            "partitions": null,
+                            "type": "range",
+                            "possible_keys": "slots_date_start_time_end_time_index,slots_date_index",
+                            "key": "slots_date_start_time_end_time_index",
+                            "key_len": "3",
+                            "ref": null,
+                            "rows": 310,
+                            "filtered": 50,
+                            "Extra": "Using index condition; Using where"
+                        }
+                    ]
+                },
+                {
+                    "sql": "select exists(select * from `bookings` where `bookings`.`slot_id` = ? and `bookings`.`slot_id` is not null and `status` in (?, ?) and `bookings`.`deleted_at` is null) as `exists`",
+                    "bindings": [
+                        2891,
+                        "pending",
+                        "confirmed"
+                    ],
+                    "ms": 0.6,
+                    "executions": 310,
+                    "explain": [
+                        {
+                            "id": 1,
+                            "select_type": "PRIMARY",
+                            "table": null,
+                            "partitions": null,
+                            "type": null,
+                            "possible_keys": null,
+                            "key": null,
+                            "key_len": null,
+                            "ref": null,
+                            "rows": null,
+                            "filtered": null,
+                            "Extra": "No tables used"
+                        },
+                        {
+                            "id": 2,
+                            "select_type": "SUBQUERY",
+                            "table": "bookings",
+                            "partitions": null,
+                            "type": "range",
+                            "possible_keys": "bookings_slot_status_type_idx",
+                            "key": "bookings_slot_status_type_idx",
+                            "key_len": "9",
+                            "ref": null,
+                            "rows": 2,
+                            "filtered": 10,
+                            "Extra": "Using index condition; Using where"
+                        }
+                    ]
+                }
+            ],
+            "p50_ms": 207.332,
+            "p95_ms": 241.549,
+            "queries_per_request": 314,
+            "sql_ms_per_request": 92.725,
+            "response_hashes": [
+                "f1465ece7575304f813caf9edc9a70d956412285b91c340e91fcb106d2589dd9"
+            ]
+        }
+    }
+}
