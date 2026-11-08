@@ -52,7 +52,8 @@ class BookingAvailabilityPerformanceTest extends TestCase
                 'customer_id' => $customer->id,
                 'resource_id' => $resource->id,
                 'slot_id' => $otherSlot->id,
-                'status' => 'confirmed',
+                // Historical rows provide volume without impossible active reservations.
+                'status' => 'canceled',
                 'type' => 'one-on-one',
                 'created_at' => $now,
                 'updated_at' => $now,
