@@ -23,6 +23,7 @@ class CaptureBookingPayment implements ShouldQueue
 
     public int $timeout = 120;
 
+    /** @var list<int> */
     public array $backoff = [30, 120, 300, 900];
 
     public function __construct(public int $paymentId, public int $transactionId)

@@ -31,6 +31,7 @@
         <server name="DB_DATABASE" value=":memory:" force="true"/>
         <server name="DB_URL" value="" force="true"/>
         <env name="MAIL_MAILER" value="array"/>
+        <env name="PAYMOB_WEBHOOK_URL" value="/paymob/webhook"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <server name="SESSION_DRIVER" value="array" force="true"/>
         <env name="PULSE_ENABLED" value="false"/>

@@ -12,6 +12,9 @@ use Illuminate\Support\Collection;
 
 class BookingRepository implements BookingCancellationRepositoryInterface, BookingRepositoryInterface
 {
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function create(array $data): Booking
     {
         /** @var Booking $booking */
@@ -20,6 +23,9 @@ class BookingRepository implements BookingCancellationRepositoryInterface, Booki
         return $booking;
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function update(array $data, int $id): bool
     {
         return $this->find($id)->update($data);
@@ -30,11 +36,17 @@ class BookingRepository implements BookingCancellationRepositoryInterface, Booki
         return $this->find($id)->delete();
     }
 
+    /**
+     * @return LengthAwarePaginator<int, Booking>
+     */
     public function all(): LengthAwarePaginator
     {
         return Booking::query()->paginate();
     }
 
+    /**
+     * @return LengthAwarePaginator<int, Booking>
+     */
     public function indexPage(int $perPage, ?int $customerId = null): LengthAwarePaginator
     {
         return Booking::query()
@@ -50,6 +62,9 @@ class BookingRepository implements BookingCancellationRepositoryInterface, Booki
             ->paginate($perPage);
     }
 
+    /**
+     * @return LengthAwarePaginator<int, Booking>
+     */
     public function bottleneckIndexPage(int $perPage, ?int $customerId = null): LengthAwarePaginator
     {
         return Booking::query()
@@ -103,6 +118,9 @@ class BookingRepository implements BookingCancellationRepositoryInterface, Booki
         return $booking;
     }
 
+    /**
+     * @return Collection<int, Booking>
+     */
     public function getBookingForReminder(int $daysBeforeReminder): Collection
     {
         $reminderDate = Carbon::now()->addDays($daysBeforeReminder)->toDateString();
@@ -116,6 +134,9 @@ class BookingRepository implements BookingCancellationRepositoryInterface, Booki
             ->get();
     }
 
+    /**
+     * @return Collection<int, Booking>
+     */
     public function claimBookingReminders(int $daysBeforeReminder): Collection
     {
         $reminderDate = Carbon::now()->addDays($daysBeforeReminder)->toDateString();
