@@ -58,10 +58,12 @@ test('it creates a pending group booking until the minimum participants count is
 
 test('it keeps group bookings pending until payment even when minimum participants is reached', function () {
     $slot = Slot::factory()->create();
+    $resource = Resource::factory()->create(['capacity' => 3]);
 
     $existing = Booking::factory()->create([
         'type' => 'group',
         'slot_id' => $slot->id,
+        'resource_id' => $resource->id,
         'status' => 'pending',
     ]);
 
